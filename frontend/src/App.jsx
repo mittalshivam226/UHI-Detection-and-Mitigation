@@ -15,6 +15,8 @@ L.Icon.Default.mergeOptions({
 });
 
 const API = 'http://localhost:8001';
+const ML_API = `${API}/ml`;
+const LEGACY_API = `${API}/api`;
 
 // Default hotspots shown before the first API call
 const DEFAULT_HOTSPOTS = [
@@ -189,8 +191,85 @@ function EnvBarChart({ env }) {
   );
 }
 
+// ─── ML Insights Panel ───────────────────────────────────────────────────────
+function MLInsightsPanel({ ml }) {
+  if (!ml) return null;
+  const prob   = ml.uhi_probability ?? 0;
+  const score  = ml.uhi_score ?? 0;
+  const conf   = ml.model_confidence ?? 'medium';
+  const confColor = conf === 'high' ? '#00e676' : conf === 'medium' ? '#FFD700' : '#ff7722';
+  const probColor = prob > 0.7 ? '#FF3B3B' : prob > 0.4 ? '#ff7722' : '#00e676';
+  const scoreColor = score > 0.7 ? '#FF3B3B' : score > 0.4 ? '#ff7722' : '#00e676';
+
+  return (
+    <div className="panel-section" style={{background:'rgba(0,242,255,0.03)',border:'1px solid rgba(0,242,255,0.12)',borderRadius:10,padding:'14px 16px',marginBottom:12}}>
+      <div className="panel-section-header" style={{marginBottom:12}}>
+        <div className="glow-dot" style={{background:'#a78bfa',boxShadow:'0 0 6px #a78bfa'}}/>
+        ML Intelligence
+        <span style={{marginLeft:'auto',fontSize:9,letterSpacing:'1.5px',color:confColor,fontWeight:700,background:`${confColor}18`,padding:'2px 8px',borderRadius:20,border:`1px solid ${confColor}44`}}>
+          {conf.toUpperCase()} CONFIDENCE
+        </span>
+      </div>
+
+      {/* UHI Probability */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--on-muted)',marginBottom:5}}>
+          <span>UHI Probability</span>
+          <span style={{color:probColor,fontWeight:700,fontSize:12}}>{(prob*100).toFixed(1)}%</span>
+        </div>
+        <div style={{height:6,background:'rgba(255,255,255,0.06)',borderRadius:4,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${prob*100}%`,background:`linear-gradient(to right,#00e676,${probColor})`,borderRadius:4,transition:'width 0.6s ease',boxShadow:`0 0 8px ${probColor}66`}}/>
+        </div>
+      </div>
+
+      {/* UHI Score */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--on-muted)',marginBottom:5}}>
+          <span>UHI Severity Score</span>
+          <span style={{color:scoreColor,fontWeight:700,fontSize:12}}>{(score*100).toFixed(0)}/100</span>
+        </div>
+        <div style={{height:6,background:'rgba(255,255,255,0.06)',borderRadius:4,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${score*100}%`,background:`linear-gradient(to right,#4ade80,${scoreColor})`,borderRadius:4,transition:'width 0.6s ease',boxShadow:`0 0 8px ${scoreColor}66`}}/>
+        </div>
+      </div>
+
+      {/* Predicted vs Actual Temp */}
+      {ml.predicted_temperature != null && ml.environmental_data?.lst_celsius != null && (
+        <div style={{display:'flex',gap:8,marginBottom:4}}>
+          <div style={{flex:1,background:'rgba(255,255,255,0.04)',borderRadius:8,padding:'8px 10px',textAlign:'center'}}>
+            <div style={{fontSize:9,color:'var(--on-muted)',letterSpacing:'1px',marginBottom:3}}>ACTUAL LST</div>
+            <div style={{fontFamily:'var(--font-display)',fontSize:18,fontWeight:700,color:'#FF3B3B'}}>{ml.environmental_data.lst_celsius.toFixed(1)}°</div>
+            <div style={{fontSize:9,color:'var(--on-muted)'}}>Landsat 8/9</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',color:'var(--on-muted)',fontSize:10}}>→</div>
+          <div style={{flex:1,background:'rgba(167,139,250,0.06)',borderRadius:8,padding:'8px 10px',textAlign:'center',border:'1px solid rgba(167,139,250,0.15)'}}>
+            <div style={{fontSize:9,color:'#a78bfa',letterSpacing:'1px',marginBottom:3}}>ML PREDICTED</div>
+            <div style={{fontFamily:'var(--font-display)',fontSize:18,fontWeight:700,color:'#a78bfa'}}>{ml.predicted_temperature.toFixed(1)}°</div>
+            <div style={{fontSize:9,color:'var(--on-muted)'}}>RF Regressor</div>
+          </div>
+        </div>
+      )}
+
+      {/* Feature importance mini bars */}
+      {ml.feature_importance && (
+        <div style={{marginTop:10}}>
+          <div style={{fontSize:9,color:'var(--on-muted)',letterSpacing:'1px',marginBottom:6}}>FEATURE IMPORTANCE (CLASSIFIER)</div>
+          {Object.entries(ml.feature_importance).sort((a,b)=>b[1]-a[1]).map(([feat,imp])=>(
+            <div key={feat} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:9,color:'var(--on-muted)',width:30,textAlign:'right'}}>{feat.toUpperCase()}</span>
+              <div style={{flex:1,height:4,background:'rgba(255,255,255,0.06)',borderRadius:2}}>
+                <div style={{height:'100%',width:`${imp*100}%`,background:'#a78bfa',borderRadius:2}}/>
+              </div>
+              <span style={{fontSize:9,color:'#a78bfa',width:30}}>{(imp*100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SimTrendChart({ currentTemp, simData }) {
-  if (!simData) return null;
   const treeSteps = [0,25,50,75,100].map(pct => {
     const drop = (pct/100) * 3.0;
     return { pct:`${pct}%`, temp: parseFloat((currentTemp - drop).toFixed(1)) };
@@ -265,34 +344,64 @@ function LeftSidebar({ layers, setLayers, hotspots, hotspotsLoading }) {
 }
 
 // ─── Right Analysis Panel ─────────────────────────────────────────────────────
-function RightPanel({ analysis, loading, pos }) {
+function RightPanel({ analysis, mlData, loading, pos }) {
   const [treePct,  setTreePct]  = useState(30);
   const [roofPct,  setRoofPct]  = useState(20);
   const [waterPct, setWaterPct] = useState(0);
   const [simResult, setSimResult] = useState(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // call /api/simulate whenever sliders or temp change
-  const currentTemp = analysis?.environmental_data?.lst_celsius;
+  // call /ml/simulate (falls back to /api/simulate) whenever sliders or temp change
+  const currentTemp = mlData?.environmental_data?.lst_celsius
+    ?? analysis?.environmental_data?.lst_celsius;
+  const currentNdvi = mlData?.environmental_data?.ndvi
+    ?? analysis?.environmental_data?.ndvi;
+  const currentNdbi = mlData?.environmental_data?.ndbi
+    ?? analysis?.environmental_data?.ndbi;
+
   useEffect(() => {
     if (!currentTemp) return;
     const actions = [];
     const intensities = {};
-    if (treePct  > 0) { actions.push('trees');    intensities.trees    = treePct;  }
+    if (treePct  > 0) { actions.push('trees');    intensities.trees     = treePct;  }
     if (roofPct  > 0) { actions.push('cool_roof'); intensities.cool_roof = roofPct; }
-    if (waterPct > 0) { actions.push('water');     intensities.water    = waterPct; }
+    if (waterPct > 0) { actions.push('water');     intensities.water     = waterPct; }
     if (actions.length === 0) { setSimResult(null); return; }
 
     const timer = setTimeout(async () => {
       setSimLoading(true);
       try {
-        const r = await fetch(`${API}/api/simulate`, {
+        // Try ML simulate first
+        if (currentNdvi != null && currentNdbi != null) {
+          const r = await fetch(`${ML_API}/simulate`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ ndvi: currentNdvi, ndbi: currentNdbi, actions }),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            // Normalise to the shape the UI expects
+            setSimResult({
+              current_temp:   d.original_temperature,
+              predicted_temp: d.new_temperature,
+              reduction:      d.temperature_reduction,
+              breakdown: actions.map((a,i) => ({
+                action: a, label: a,
+                reduction: parseFloat((d.temperature_reduction / actions.length).toFixed(2)),
+                intensity: intensities[a] || 100,
+              })),
+            });
+            setSimLoading(false);
+            return;
+          }
+        }
+        // Fallback: legacy /api/simulate
+        const r2 = await fetch(`${LEGACY_API}/simulate`, {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ current_temp: currentTemp, actions, intensities }),
         });
-        if (r.ok) { setSimResult(await r.json()); return; }
-      } catch { /* fall through to local fallback */ }
-      // always-working local fallback
+        if (r2.ok) { setSimResult(await r2.json()); setSimLoading(false); return; }
+      } catch { /* fall through */ }
+      // Local fallback
       const impacts = {trees:2.5,cool_roof:2.0,water:1.5,green_roof:2.0};
       let drop = 0;
       const breakdown = actions.map(a => {
@@ -300,17 +409,15 @@ function RightPanel({ analysis, loading, pos }) {
         drop += red;
         return {action:a,label:a,reduction:parseFloat(red.toFixed(2)),intensity:intensities[a]||100};
       });
-      setSimResult({ current_temp:currentTemp, predicted_temp: parseFloat(Math.max(currentTemp-drop,15).toFixed(1)), reduction:parseFloat(drop.toFixed(2)), breakdown });
+      setSimResult({ current_temp:currentTemp, predicted_temp:parseFloat(Math.max(currentTemp-drop,15).toFixed(1)), reduction:parseFloat(drop.toFixed(2)), breakdown });
       setSimLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [treePct, roofPct, waterPct, currentTemp]);
+  }, [treePct, roofPct, waterPct, currentTemp, currentNdvi, currentNdbi]);
 
-
-  // reset sim when location changes
   useEffect(() => { setTreePct(30); setRoofPct(20); setWaterPct(0); setSimResult(null); }, [pos]);
 
-  if (!pos && !loading && !analysis) {
+  if (!pos && !loading && !analysis && !mlData) {
     return (
       <aside className="right-panel">
         <div className="right-panel-empty">
@@ -334,25 +441,33 @@ function RightPanel({ analysis, loading, pos }) {
     );
   }
 
-  if (!analysis) return null;
+  const env       = mlData?.environmental_data ?? analysis?.environmental_data;
+  const ana       = analysis?.analysis;
+  const uhi_flag  = mlData?.uhi_detected ?? ana?.uhi_detected;
+  const heatColor = !env ? '#00F2FF'
+    : (mlData ? (mlData.uhi_detected ? '#FF3B3B' : '#00e676')
+      : (ana?.heat_classification==='High'?'#FF3B3B':ana?.heat_classification==='Medium'?'#ff7722':'#00e676'));
 
-  const { environmental_data: env, analysis: ana } = analysis;
-  const heatColor = ana.heat_classification==='High'?'#FF3B3B':ana.heat_classification==='Medium'?'#ff7722':'#00e676';
-  const vegPct  = {Low:18,Moderate:52,High:82}[ana.vegetation_level]??18;
-  const denPct  = {Low:18,Moderate:52,High:82}[ana.urban_density]??60;
+  if (!env) return null;
+  const vegPct  = {Low:18,Moderate:52,High:82}[ana?.vegetation_level]??18;
+  const denPct  = {Low:18,Moderate:52,High:82}[ana?.urban_density]??60;
   const recoIcons = {vegetation:'🌳',infrastructure:'🏠',water:'💧',mixed:'💧',monitoring:'📊'};
 
   return (
+
     <aside className="right-panel" key={`${pos?.lat}${pos?.lng}`}>
       {/* ── Header ── */}
       <div className="panel-section">
         <div className="panel-section-header"><div className="glow-dot"/>Location Analysis</div>
         <div style={{fontSize:11,color:'var(--on-muted)',fontFamily:'var(--font-display)'}}>
           {pos?.lat?.toFixed(4)}°N · {Math.abs(pos?.lng)?.toFixed(4)}° · 1km radius
-          {analysis?.analysis?.uhi_detected &&
+          {uhi_flag &&
             <span style={{marginLeft:8,color:'#FF3B3B',fontWeight:700,fontSize:10,letterSpacing:'1px'}}>⚠ UHI DETECTED</span>}
         </div>
       </div>
+
+      {/* ── ML Insights (new) ── */}
+      <MLInsightsPanel ml={mlData}/>
 
       {/* ── Environmental Metrics ── */}
       <div className="panel-section">
@@ -363,19 +478,19 @@ function RightPanel({ analysis, loading, pos }) {
             <div className="metric-card-value" style={{color:heatColor,textShadow:`0 0 10px ${heatColor}`}}>
               {env.lst_celsius.toFixed(1)}°
             </div>
-            <div className="metric-card-sub">{ana.heat_classification}</div>
+            <div className="metric-card-sub">{ana?.heat_classification ?? (env.lst_celsius > 37 ? 'High' : env.lst_celsius > 30 ? 'Medium' : 'Low')}</div>
           </div>
           <div className="metric-card">
             <div className="metric-card-label">Vegetation</div>
             <div className="metric-card-value" style={{color:'#00e676'}}>{env.ndvi.toFixed(2)}</div>
-            <div className="metric-card-sub">{ana.vegetation_level}</div>
-            <ProgressBar pct={vegPct} color="#00e676"/>
+            <div className="metric-card-sub">{ana?.vegetation_level ?? (env.ndvi > 0.4 ? 'High' : env.ndvi > 0.2 ? 'Moderate' : 'Low')}</div>
+            <ProgressBar pct={{Low:18,Moderate:52,High:82}[ana?.vegetation_level]??Math.round((env.ndvi+1)/2*100)} color="#00e676"/>
           </div>
           <div className="metric-card">
             <div className="metric-card-label">Built-Up</div>
             <div className="metric-card-value" style={{color:'#FFD700'}}>{env.ndbi.toFixed(2)}</div>
-            <div className="metric-card-sub">{ana.urban_density}</div>
-            <ProgressBar pct={denPct} color="#FFD700"/>
+            <div className="metric-card-sub">{ana?.urban_density ?? (env.ndbi > 0.15 ? 'High' : env.ndbi > 0 ? 'Moderate' : 'Low')}</div>
+            <ProgressBar pct={{Low:18,Moderate:52,High:82}[ana?.urban_density]??Math.round((env.ndbi+1)/2*100)} color="#FFD700"/>
           </div>
         </div>
       </div>
@@ -383,13 +498,13 @@ function RightPanel({ analysis, loading, pos }) {
       {/* ── Bar Chart ── */}
       <EnvBarChart env={env}/>
 
-      {/* ── Cause Detection ── */}
-      <div className="panel-section">
+      {/* ── Cause Detection (legacy layer — when available) ── */}
+      {ana?.causes && (<div className="panel-section">
         <div className="panel-section-header">
           <div className="glow-dot" style={{background:'#FF3B3B',boxShadow:'0 0 6px #FF3B3B'}}/>
           Cause Detection
         </div>
-        {ana.causes.map((c,i) => (
+        {ana?.causes?.map((c,i) => (
           <div key={i} className="cause-item" style={{borderLeftColor:c.id==='low_vegetation'?'#00e676':c.id==='high_buildup'?'#FFD700':'#FF3B3B'}}>
             <span className="cause-icon">{c.icon}</span>
             <div>
@@ -398,10 +513,10 @@ function RightPanel({ analysis, loading, pos }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>)}
 
-      {/* ── Recommendations ── */}
-      <div className="panel-section">
+      {/* ── Recommendations (legacy layer — when available) ── */}
+      {ana?.recommendations && (<div className="panel-section">
         <div className="panel-section-header">
           <div className="glow-dot" style={{background:'#00e676',boxShadow:'0 0 6px #00e676'}}/>
           Smart Recommendations
@@ -416,7 +531,7 @@ function RightPanel({ analysis, loading, pos }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>)}
 
       {/* ── Simulation ── */}
       <div className="panel-section" style={{marginBottom:20}}>
@@ -477,6 +592,7 @@ function RightPanel({ analysis, loading, pos }) {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [analysis,         setAnalysis]         = useState(null);
+  const [mlData,           setMlData]           = useState(null);
   const [loading,          setLoading]           = useState(false);
   const [pos,              setPos]               = useState(null);
   const [layers,           setLayers]            = useState({heat:true,veg:false,density:false});
@@ -498,10 +614,21 @@ export default function App() {
     setPos({lat, lng});
     setLoading(true);
     setAnalysis(null);
-    // kick off both in parallel
+    setMlData(null);
+    // kick off hotspots + ML analysis in parallel
     fetchHotspots(lat, lng);
+
+    // 1. Call ML endpoint (primary)
+    fetch(`${ML_API}/analyze-location`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({lat, lon:lng, radius_m:1000}),
+    }).then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setMlData(d); })
+      .catch(() => {});
+
+    // 2. Call legacy endpoint (for causes + recommendations)
     try {
-      const r = await fetch(`${API}/api/analyze-location`, {
+      const r = await fetch(`${LEGACY_API}/analyze-location`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({lat, lon:lng, radius_m:1000}),
       });
@@ -606,7 +733,7 @@ export default function App() {
         <UHIMap onMapClick={handleMapClick} layers={layers} selectedPos={pos} flyTo={flyTo} hotspots={hotspots}/>
       </div>
 
-      <RightPanel analysis={analysis} loading={loading} pos={pos}/>
+      <RightPanel analysis={analysis} mlData={mlData} loading={loading} pos={pos}/>
     </div>
   );
 }
