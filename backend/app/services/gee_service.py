@@ -298,9 +298,11 @@ def get_layer_tile_url(layer: str, lat: float, lon: float, radius_km: float = 15
             .multiply(0.00341802).add(149.0).subtract(273.15)
             .rename("LST")
         )
-        viz = {"bands": ["LST"], "min": "15", "max": "55",
-               "palette": ["#0d0221","#3d1c6e","#9b4dca","#ff7c00","#ff3b00","#ff0000"]}
-        meta = {"min": 15, "max": 55, "unit": "°C", "palette": viz["palette"]}
+        # Standard thermal palette: cool blue → cyan → green → yellow → orange → red (hot)
+        _LST_PAL = ["#040080","#0000cd","#0080ff","#00d0ff","#00ffb0",
+                    "#80ff00","#ffff00","#ffa000","#ff4000","#cc0000"]
+        viz = {"bands": ["LST"], "min": "15", "max": "55", "palette": _LST_PAL}
+        meta = {"min": 15, "max": 55, "unit": "°C", "palette": _LST_PAL}
 
     elif layer == "ndvi":
         col = (
@@ -310,9 +312,11 @@ def get_layer_tile_url(layer: str, lat: float, lon: float, radius_km: float = 15
             .filterMetadata("CLOUDY_PIXEL_PERCENTAGE", "less_than", CLOUD_COVER_MAX)
         )
         image = col.median().normalizedDifference(["B8", "B4"]).rename("NDVI")
-        viz = {"bands": ["NDVI"], "min": "-0.2", "max": "0.8",
-               "palette": ["#3d2b1f","#a08040","#c8c830","#66b032","#00a020","#005010"]}
-        meta = {"min": -0.2, "max": 0.8, "unit": "index", "palette": viz["palette"]}
+        # Standard NDVI palette: bare/urban (brown-red) → sparse (yellow) → dense vegetation (dark green)
+        _NDVI_PAL = ["#8b4513","#c8a060","#e8d080","#f5f5a0",
+                     "#b8e060","#78c830","#3a9820","#1a6810","#004000"]
+        viz = {"bands": ["NDVI"], "min": "-0.2", "max": "0.8", "palette": _NDVI_PAL}
+        meta = {"min": -0.2, "max": 0.8, "unit": "index", "palette": _NDVI_PAL}
 
     elif layer == "ndbi":
         col = (
@@ -322,9 +326,11 @@ def get_layer_tile_url(layer: str, lat: float, lon: float, radius_km: float = 15
             .filterMetadata("CLOUDY_PIXEL_PERCENTAGE", "less_than", CLOUD_COVER_MAX)
         )
         image = col.median().normalizedDifference(["B11", "B8"]).rename("NDBI")
-        viz = {"bands": ["NDBI"], "min": "-0.5", "max": "0.5",
-               "palette": ["#001830","#205090","#b09030","#d0b020","#ffd700","#ffee00"]}
-        meta = {"min": -0.5, "max": 0.5, "unit": "index", "palette": viz["palette"]}
+        # Standard NDBI palette: water/veg (dark blue) → bare soil (tan) → dense urban (bright yellow/white)
+        _NDBI_PAL = ["#001060","#0040a0","#2080d0","#80c0e0","#e0e0a0",
+                     "#d0b050","#cc8000","#c04000","#a00000","#ffff80"]
+        viz = {"bands": ["NDBI"], "min": "-0.5", "max": "0.5", "palette": _NDBI_PAL}
+        meta = {"min": -0.5, "max": 0.5, "unit": "index", "palette": _NDBI_PAL}
 
     else:
         raise ValueError(f"Unknown layer: {layer!r}. Must be 'lst', 'ndvi', or 'ndbi'.")

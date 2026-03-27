@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const API = 'http://localhost:8001';
+const API = 'http://localhost:8002';
 const ML_API = `${API}/ml`;
 const LEGACY_API = `${API}/api`;
 
@@ -28,9 +28,21 @@ const DEFAULT_HOTSPOTS = [
 ];
 
 const LAYERS_CONFIG = [
-  { id: 'heat',    label: 'Heat Map',      color: '#FF3B3B', gradient: 'linear-gradient(to right,#1a0000,#ff7722,#ff3b3b)' },
-  { id: 'veg',     label: 'Vegetation',    color: '#00e676', gradient: 'linear-gradient(to right,#001a0a,#00c853,#69f0ae)' },
-  { id: 'density', label: 'Urban Density', color: '#FFD700', gradient: 'linear-gradient(to right,#1a1500,#ffd700,#fff176)' },
+  {
+    id: 'heat', label: 'Heat Map', color: '#ff4000',
+    // thermal: blue → cyan → green → yellow → orange → red
+    gradient: 'linear-gradient(to right,#040080,#0000cd,#0080ff,#00d0ff,#00ffb0,#80ff00,#ffff00,#ffa000,#ff4000,#cc0000)',
+  },
+  {
+    id: 'veg', label: 'Vegetation', color: '#3a9820',
+    // NDVI: brown (bare) → yellow-green (sparse) → dark green (dense vegetation)
+    gradient: 'linear-gradient(to right,#8b4513,#c8a060,#e8d080,#f5f5a0,#b8e060,#78c830,#3a9820,#1a6810,#004000)',
+  },
+  {
+    id: 'density', label: 'Urban Density', color: '#cc8000',
+    // NDBI: dark blue (water/veg) → tan (bare) → orange/amber (dense urban)
+    gradient: 'linear-gradient(to right,#001060,#0040a0,#2080d0,#80c0e0,#e0e0a0,#d0b050,#cc8000,#c04000,#a00000,#ffff80)',
+  },
 ];
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
