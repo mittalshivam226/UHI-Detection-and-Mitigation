@@ -268,6 +268,73 @@ def fetch_hotspots(
         return _fallback_hotspots(lat, lon)
 
 
+def get_layer_tile_url(layer: str, lat: float, lon: float, radius_km: float = 150.0) -> dict:
+    """
+    Generate a GEE tile URL template for a given layer type.
+    Returns tile_url (with {z}/{x}/{y}), min, max, unit, palette.
+    """
+    if not _gee_ready:
+        raise RuntimeError("GEE not initialized")
+
+    deg = radius_km / 111.0
+    bbox = ee.Geometry.BBox(lon - deg, lat - deg, lon + deg, lat + deg)
+
+    if layer == "lst":
+        col = (
+            ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+            .filterBounds(bbox)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+            .filterMetadata("CLOUD_COVER", "less_than", CLOUD_COVER_MAX)
+        )
+        if col.size().getInfo() == 0:
+            col = (
+                ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+                .filterBounds(bbox)
+                .filterDate(DATA_START_DATE, DATA_END_DATE)
+                .filterMetadata("CLOUD_COVER", "less_than", CLOUD_COVER_MAX)
+            )
+        image = (
+            col.median().select("ST_B10")
+            .multiply(0.00341802).add(149.0).subtract(273.15)
+            .rename("LST")
+        )
+        viz = {"bands": ["LST"], "min": "15", "max": "55",
+               "palette": ["#0d0221","#3d1c6e","#9b4dca","#ff7c00","#ff3b00","#ff0000"]}
+        meta = {"min": 15, "max": 55, "unit": "°C", "palette": viz["palette"]}
+
+    elif layer == "ndvi":
+        col = (
+            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+            .filterBounds(bbox)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+            .filterMetadata("CLOUDY_PIXEL_PERCENTAGE", "less_than", CLOUD_COVER_MAX)
+        )
+        image = col.median().normalizedDifference(["B8", "B4"]).rename("NDVI")
+        viz = {"bands": ["NDVI"], "min": "-0.2", "max": "0.8",
+               "palette": ["#3d2b1f","#a08040","#c8c830","#66b032","#00a020","#005010"]}
+        meta = {"min": -0.2, "max": 0.8, "unit": "index", "palette": viz["palette"]}
+
+    elif layer == "ndbi":
+        col = (
+            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+            .filterBounds(bbox)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+            .filterMetadata("CLOUDY_PIXEL_PERCENTAGE", "less_than", CLOUD_COVER_MAX)
+        )
+        image = col.median().normalizedDifference(["B11", "B8"]).rename("NDBI")
+        viz = {"bands": ["NDBI"], "min": "-0.5", "max": "0.5",
+               "palette": ["#001830","#205090","#b09030","#d0b020","#ffd700","#ffee00"]}
+        meta = {"min": -0.5, "max": 0.5, "unit": "index", "palette": viz["palette"]}
+
+    else:
+        raise ValueError(f"Unknown layer: {layer!r}. Must be 'lst', 'ndvi', or 'ndbi'.")
+
+    map_id = ee.data.getMapId({"image": image, **viz})
+    tile_url: str = map_id["tile_fetcher"].url_format
+    logger.info("Generated tile URL for layer=%s around (%.3f,%.3f)", layer, lat, lon)
+    return {"tile_url": tile_url, "layer": layer, **meta}
+
+
 def _fallback_hotspots(lat: float, lon: float) -> list[dict]:
     """Deterministic demo hotspots centred on the given coordinate."""
     import random, math

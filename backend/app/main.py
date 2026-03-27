@@ -9,7 +9,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analyze, simulate, hotspots, ml_routes
+from app.api.routes import analyze, simulate, hotspots, ml_routes, tiles
 from app.services import gee_service, ml_service
 
 logging.basicConfig(
@@ -43,6 +43,7 @@ app.add_middleware(
 app.include_router(analyze.router,     prefix="/api", tags=["Analysis"])
 app.include_router(simulate.router,    prefix="/api", tags=["Simulation"])
 app.include_router(hotspots.router,    prefix="/api", tags=["Hotspots"])
+app.include_router(tiles.router,       prefix="/api", tags=["Map Tiles"])
 app.include_router(ml_routes.router,   prefix="/ml",  tags=["ML — UHI Detection"])
 
 
@@ -78,6 +79,7 @@ def root():
             "/api/analyze-location",
             "/api/simulate",
             "/api/simulate/actions",
+            "/api/layer-tiles",
             "/ml/analyze-location",
             "/ml/simulate",
             "/ml/status",

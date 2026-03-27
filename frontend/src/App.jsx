@@ -94,11 +94,12 @@ function useGeocoder(onResult) {
 }
 
 // ─── Leaflet Map ─────────────────────────────────────────────────────────────
-function UHIMap({ onMapClick, layers, selectedPos, flyTo, hotspots }) {
+function UHIMap({ onMapClick, layers, selectedPos, flyTo, hotspots, tileLayers }) {
   const mapRef           = useRef(null);
   const mapInstanceRef   = useRef(null);
   const clickMarkerRef   = useRef(null);
   const hotspotLayersRef = useRef([]);
+  const tileLayersRef    = useRef({});  // { 'heat': L.TileLayer, 'veg': L.TileLayer, ... }
 
   // init map
   useEffect(() => {
@@ -153,6 +154,25 @@ function UHIMap({ onMapClick, layers, selectedPos, flyTo, hotspots }) {
         {radius:8,color:'#00F2FF',fillColor:'#00F2FF',fillOpacity:0.9,weight:2}).addTo(map);
     }
   }, [selectedPos]);
+
+  // satellite tile layers from GEE
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    // For each configured layer, add/remove based on tileLayers prop
+    const LAYER_KEY_MAP = { heat: 'lst', veg: 'ndvi', density: 'ndbi' };
+    Object.entries(LAYER_KEY_MAP).forEach(([toggle, geeKey]) => {
+      const tileUrl = tileLayers?.[toggle];
+      if (tileUrl && !tileLayersRef.current[toggle]) {
+        const tl = L.tileLayer(tileUrl, { opacity: 0.65, attribution: '© Google Earth Engine' });
+        tl.addTo(map);
+        tileLayersRef.current[toggle] = tl;
+      } else if (!tileUrl && tileLayersRef.current[toggle]) {
+        tileLayersRef.current[toggle].remove();
+        delete tileLayersRef.current[toggle];
+      }
+    });
+  }, [tileLayers]);
 
   return <div ref={mapRef} className="map-container"/>;
 }
@@ -291,26 +311,46 @@ function SimTrendChart({ currentTemp, simData }) {
   );
 }
 
-// ─── Left Sidebar ─────────────────────────────────────────────────────────────
-function LeftSidebar({ layers, setLayers, hotspots, hotspotsLoading }) {
-  const toggle = id => setLayers(p => ({...p,[id]:!p[id]}));
+// ─── Left Sidebar ─────────────────────────────────────────────────────
+const LAYER_GEE_ID = { heat: 'lst', veg: 'ndvi', density: 'ndbi' };
+
+function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading }) {
   const avgTemp = hotspots.length ? (hotspots.reduce((s,h)=>s+h.temp,0)/hotspots.length).toFixed(1) : '--';
   return (
     <aside className="left-sidebar">
       <div className="sidebar-section">
         <div className="sidebar-section-title">Layer Controls</div>
-        {LAYERS_CONFIG.map(l => (
-          <div key={l.id} className="layer-item">
-            <div className="layer-header">
-              <div className="layer-label">
-                <div className="layer-dot" style={{background:l.color,boxShadow:`0 0 8px ${l.color}`}}/>
-                <span style={{fontSize:13}}>{l.label}</span>
+        {LAYERS_CONFIG.map(l => {
+          const meta = tileMeta[l.id];
+          const loading = tileLoading[l.id];
+          const active  = layers[l.id];
+          return (
+            <div key={l.id} className="layer-item">
+              <div className="layer-header">
+                <div className="layer-label">
+                  <div className="layer-dot" style={{background:l.color,boxShadow:`0 0 8px ${l.color}`}}/>
+                  <span style={{fontSize:13}}>{l.label}</span>
+                  {loading && <span style={{fontSize:9,color:l.color,marginLeft:6,opacity:0.8}}>↻</span>}
+                </div>
+                <Toggle checked={active} onChange={() => onLayerToggle(l.id)}/>
               </div>
-              <Toggle checked={layers[l.id]} onChange={()=>toggle(l.id)}/>
+
+              {/* Live palette legend when active and meta is loaded */}
+              {active && meta ? (
+                <div style={{marginTop:6}}>
+                  <div style={{height:6,borderRadius:3,background:`linear-gradient(to right,${meta.palette.join(',')})`,marginBottom:4}}/>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'var(--on-muted)'}}>
+                    <span>{meta.min}{meta.unit}</span>
+                    <span style={{fontSize:9,color:l.color,letterSpacing:'0.5px'}}>GEE LIVE</span>
+                    <span>{meta.max}{meta.unit}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="legend-bar" style={{background: active ? l.gradient : 'rgba(255,255,255,0.04)', opacity: active ? 1 : 0.3}}/>
+              )}
             </div>
-            <div className="legend-bar" style={{background:l.gradient}}/>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="sidebar-section" style={{flex:1,overflow:'auto'}}>
@@ -596,9 +636,44 @@ export default function App() {
   const [loading,          setLoading]           = useState(false);
   const [pos,              setPos]               = useState(null);
   const [layers,           setLayers]            = useState({heat:true,veg:false,density:false});
+  const [tileLayers,       setTileLayers]        = useState({});   // { layerId: tileUrl }
+  const [tileMeta,         setTileMeta]          = useState({});   // { layerId: {min,max,unit,palette} }
+  const [tileLoading,      setTileLoading]       = useState({});   // { layerId: bool }
   const [flyTo,            setFlyTo]             = useState(null);
   const [hotspots,         setHotspots]          = useState(DEFAULT_HOTSPOTS);
   const [hotspotsLoading,  setHotspotsLoading]   = useState(false);
+
+  // Layer toggle: if turning on, fetch GEE tile URL; if turning off, clear it
+  const handleLayerToggle = useCallback(async (id) => {
+    const willBeOn = !layers[id];
+    setLayers(p => ({...p, [id]: willBeOn}));
+
+    if (!willBeOn) {
+      // Remove tile layer
+      setTileLayers(p => { const n={...p}; delete n[id]; return n; });
+      setTileMeta(p  => { const n={...p}; delete n[id]; return n; });
+      return;
+    }
+
+    // Fetch GEE tile URL for this layer
+    const geeLayer = LAYER_GEE_ID[id];
+    const centre   = pos ?? { lat: 40.74, lng: -73.99 };  // default to NYC
+    setTileLoading(p => ({...p, [id]: true}));
+    try {
+      const r = await fetch(
+        `${LEGACY_API}/layer-tiles?layer=${geeLayer}&lat=${centre.lat}&lon=${centre.lng}&radius_km=150`
+      );
+      if (r.ok) {
+        const d = await r.json();
+        setTileLayers(p => ({...p, [id]: d.tile_url}));
+        setTileMeta(p  => ({...p, [id]: {min:d.min,max:d.max,unit:d.unit,palette:d.palette}}));
+      }
+    } catch (e) {
+      console.warn('layer-tiles fetch failed:', e);
+    } finally {
+      setTileLoading(p => ({...p, [id]: false}));
+    }
+  }, [layers, pos]);
 
   // Fetch real GEE hotspots centred on the given coordinate
   const fetchHotspots = useCallback(async (lat, lng) => {
@@ -727,10 +802,17 @@ export default function App() {
         </div>
       </header>
 
-      <LeftSidebar layers={layers} setLayers={setLayers} hotspots={hotspots} hotspotsLoading={hotspotsLoading}/>
+      <LeftSidebar
+        layers={layers}
+        onLayerToggle={handleLayerToggle}
+        tileMeta={tileMeta}
+        tileLoading={tileLoading}
+        hotspots={hotspots}
+        hotspotsLoading={hotspotsLoading}
+      />
 
       <div className="map-area">
-        <UHIMap onMapClick={handleMapClick} layers={layers} selectedPos={pos} flyTo={flyTo} hotspots={hotspots}/>
+        <UHIMap onMapClick={handleMapClick} layers={layers} selectedPos={pos} flyTo={flyTo} hotspots={hotspots} tileLayers={tileLayers}/>
       </div>
 
       <RightPanel analysis={analysis} mlData={mlData} loading={loading} pos={pos}/>
