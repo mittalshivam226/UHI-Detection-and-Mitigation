@@ -112,20 +112,29 @@ class MLAnalyzeResponse(BaseModel):
 
 
 class MLSimulateRequest(BaseModel):
-    ndvi: float      = Field(..., ge=-1.0, le=1.0, description="Current NDVI value")
-    ndbi: float      = Field(..., ge=-1.0, le=1.0, description="Current NDBI value")
-    actions: List[str] = Field(
-        ..., description="Mitigation actions: 'trees', 'cool_roof', 'water', 'green_roof'"
-    )
+    ndvi: float         = Field(..., ge=-1.0, le=1.0, description="Current NDVI value")
+    ndbi: float         = Field(..., ge=-1.0, le=1.0, description="Current NDBI value")
+    actions: List[str]  = Field(..., description="Mitigation actions: 'trees', 'cool_roof', 'water', 'green_roof'")
+    lst_celsius: Optional[float]             = Field(default=None, description="Actual GEE LST to use as baseline (°C)")
+    lat: float                               = Field(default=0.0, description="Latitude for climate-zone proxy")
+    intensities: Optional[Dict[str, float]]  = Field(default=None, description="Per-action intensity 0-100")
+
+
+class MLSimulateActionBreakdown(BaseModel):
+    action: str
+    label: str
+    reduction: float
+    intensity: float
 
 
 class MLSimulateResponse(BaseModel):
-    original_temperature: float  = Field(..., description="Baseline temperature (°C) from regressor")
+    original_temperature: float  = Field(..., description="Baseline LST used (°C)")
     new_temperature: float       = Field(..., description="Predicted temperature after mitigation (°C)")
     temperature_reduction: float = Field(..., description="Net cooling achieved (°C)")
     modified_ndvi: float         = Field(..., description="NDVI after applying action deltas")
     modified_ndbi: float         = Field(..., description="NDBI after applying action deltas")
     applied_actions: List[str]   = Field(..., description="Actions successfully applied")
+    per_action_breakdown: Optional[List[MLSimulateActionBreakdown]] = Field(default=None)
 
 
 class MLStatusResponse(BaseModel):

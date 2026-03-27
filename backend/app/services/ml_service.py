@@ -186,19 +186,39 @@ def compute_uhi_score(uhi_probability: float, lst: float, predicted_temp: float)
     return round(max(0.0, min(1.0, score)), 4)
 
 
+# Literature-backed maximum cooling at 100% intensity (°C)
+# Sources: Bowler et al. 2010, Santamouris 2014, Taha 1997
+ACTION_COOLING: Dict[str, Dict[str, float]] = {
+    "trees":      {"ndvi": +0.18, "ndbi": -0.05, "max_cooling_c": 4.0},
+    "cool_roof":  {"ndvi":  0.00, "ndbi": -0.15, "max_cooling_c": 5.5},
+    "water":      {"ndvi": +0.10, "ndbi": -0.06, "max_cooling_c": 2.5},
+    "green_roof": {"ndvi": +0.08, "ndbi": -0.10, "max_cooling_c": 2.5},
+}
+
+# Friendly labels for per-action display
+ACTION_LABELS: Dict[str, str] = {
+    "trees":      "Tree Cover",
+    "cool_roof":  "Cool Roof",
+    "water":      "Water Features",
+    "green_roof": "Green Roof",
+}
+
+
 def simulate_mitigation(
     ndvi: float,
     ndbi: float,
     actions: List[str],
     lat: float = 0.0,
     rural_lst_mean: Optional[float] = None,
+    lst_celsius: Optional[float] = None,
+    intensities: Optional[Dict[str, float]] = None,
 ) -> Dict:
     """
     Estimate temperature change after applying mitigation actions.
 
-    Shifts NDVI/NDBI according to published greening literature deltas,
-    then re-runs the regression model — giving an ML-based temperature estimate
-    rather than a hardcoded °C lookup.
+    Uses the actual GEE LST as baseline when provided (much more accurate than
+    the regressor which is dominated by the rural_lst_mean climate anchor).
+    Applies intensity-scaled literature cooling per action for realistic results.
 
     Returns:
         {
@@ -207,40 +227,59 @@ def simulate_mitigation(
             "temperature_reduction": float,
             "modified_ndvi": float,
             "modified_ndbi": float,
-            "applied_actions": list[str]
+            "applied_actions": list[str],
+            "per_action_breakdown": list[dict]
         }
     """
     if not _models_ready:
         raise RuntimeError("ML models not loaded — call load_models() first.")
 
-    original_temp = predict_temperature(ndvi, ndbi, lat, rural_lst_mean)
+    # 1. Determine baseline temperature
+    #    Prefer actual GEE LST; fall back to regressor only if not supplied
+    if lst_celsius is not None and lst_celsius > 0:
+        original_temp = round(float(lst_celsius), 2)
+    else:
+        original_temp = predict_temperature(ndvi, ndbi, lat, rural_lst_mean)
 
-    # Apply feature deltas for each valid action
-    mod_ndvi = ndvi
-    mod_ndbi = ndbi
-    applied  = []
-    seen     = set()
+    # 2. Apply intensity-scaled cooling and NDVI/NDBI deltas per action
+    mod_ndvi        = ndvi
+    mod_ndbi        = ndbi
+    applied         = []
+    seen            = set()
+    total_reduction = 0.0
+    breakdown       = []
 
     for action in actions:
-        if action in seen or action not in ACTION_DELTAS:
+        if action in seen or action not in ACTION_COOLING:
             continue
         seen.add(action)
-        delta = ACTION_DELTAS[action]
-        mod_ndvi = min(1.0, mod_ndvi + delta["ndvi"])
-        mod_ndbi = max(-1.0, mod_ndbi + delta["ndbi"])
-        applied.append(action)
+        cfg       = ACTION_COOLING[action]
+        intensity = float((intensities or {}).get(action, 100))
+        # Linear scaling: 0% → 0°C, 100% → max_cooling
+        cooling   = round(cfg["max_cooling_c"] * intensity / 100.0, 2)
 
-    new_temp   = predict_temperature(mod_ndvi, mod_ndbi, lat, rural_lst_mean)
-    reduction  = round(max(0.0, original_temp - new_temp), 2)
-    new_temp   = round(max(15.0, new_temp), 2)   # floor at 15 °C
+        mod_ndvi        = min(1.0,  mod_ndvi + cfg["ndvi"])
+        mod_ndbi        = max(-1.0, mod_ndbi + cfg["ndbi"])
+        total_reduction += cooling
+        applied.append(action)
+        breakdown.append({
+            "action":    action,
+            "label":     ACTION_LABELS.get(action, action),
+            "reduction": cooling,
+            "intensity": intensity,
+        })
+
+    total_reduction = round(total_reduction, 2)
+    new_temp        = round(max(10.0, original_temp - total_reduction), 2)
 
     return {
-        "original_temperature": original_temp,
-        "new_temperature":      new_temp,
-        "temperature_reduction": reduction,
-        "modified_ndvi":        round(mod_ndvi, 4),
-        "modified_ndbi":        round(mod_ndbi, 4),
-        "applied_actions":      applied,
+        "original_temperature":  original_temp,
+        "new_temperature":       new_temp,
+        "temperature_reduction": total_reduction,
+        "modified_ndvi":         round(mod_ndvi, 4),
+        "modified_ndbi":         round(mod_ndbi, 4),
+        "applied_actions":       applied,
+        "per_action_breakdown":  breakdown,
     }
 
 

@@ -423,20 +423,26 @@ function RightPanel({ analysis, mlData, loading, pos }) {
     const timer = setTimeout(async () => {
       setSimLoading(true);
       try {
-        // Try ML simulate first
+        // Try ML simulate first — sends actual LST + intensity per action
         if (currentNdvi != null && currentNdbi != null) {
           const r = await fetch(`${ML_API}/simulate`, {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ ndvi: currentNdvi, ndbi: currentNdbi, actions }),
+            body: JSON.stringify({
+              ndvi: currentNdvi,
+              ndbi: currentNdbi,
+              actions,
+              lst_celsius: currentTemp,   // actual GEE LST as baseline
+              lat: pos?.lat ?? 0,
+              intensities,                 // per-action 0–100 % values
+            }),
           });
           if (r.ok) {
             const d = await r.json();
-            // Normalise to the shape the UI expects
             setSimResult({
-              current_temp:   d.original_temperature,
+              current_temp:   d.original_temperature,  // now = actual GEE LST
               predicted_temp: d.new_temperature,
               reduction:      d.temperature_reduction,
-              breakdown: actions.map((a,i) => ({
+              breakdown:      d.per_action_breakdown ?? actions.map(a => ({
                 action: a, label: a,
                 reduction: parseFloat((d.temperature_reduction / actions.length).toFixed(2)),
                 intensity: intensities[a] || 100,
@@ -453,15 +459,21 @@ function RightPanel({ analysis, mlData, loading, pos }) {
         });
         if (r2.ok) { setSimResult(await r2.json()); setSimLoading(false); return; }
       } catch { /* fall through */ }
-      // Local fallback
-      const impacts = {trees:2.5,cool_roof:2.0,water:1.5,green_roof:2.0};
+      // Local fallback with intensity scaling
+      const impacts = {trees:4.0, cool_roof:5.5, water:2.5, green_roof:2.5};
+      const labels  = {trees:'Tree Cover', cool_roof:'Cool Roof', water:'Water Features', green_roof:'Green Roof'};
       let drop = 0;
       const breakdown = actions.map(a => {
-        const red = ((intensities[a]||100)/100)*(impacts[a]||1.5);
+        const red = parseFloat(((intensities[a]||100)/100*(impacts[a]||2.0)).toFixed(2));
         drop += red;
-        return {action:a,label:a,reduction:parseFloat(red.toFixed(2)),intensity:intensities[a]||100};
+        return { action:a, label:labels[a]||a, reduction:red, intensity:intensities[a]||100 };
       });
-      setSimResult({ current_temp:currentTemp, predicted_temp:parseFloat(Math.max(currentTemp-drop,15).toFixed(1)), reduction:parseFloat(drop.toFixed(2)), breakdown });
+      setSimResult({
+        current_temp:   currentTemp,
+        predicted_temp: parseFloat(Math.max((currentTemp??30)-drop,15).toFixed(1)),
+        reduction:      parseFloat(drop.toFixed(2)),
+        breakdown,
+      });
       setSimLoading(false);
     }, 300);
     return () => clearTimeout(timer);

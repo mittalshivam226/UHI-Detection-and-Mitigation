@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import (
     MLAnalyzeRequest, MLAnalyzeResponse, MLEnvironmentalData,
-    MLSimulateRequest, MLSimulateResponse,
+    MLSimulateRequest, MLSimulateResponse, MLSimulateActionBreakdown,
     MLStatusResponse,
 )
 from app.services import gee_service, ml_service
@@ -124,7 +124,12 @@ def ml_simulate(req: MLSimulateRequest) -> MLSimulateResponse:
         raise HTTPException(status_code=400, detail="At least one action is required.")
 
     try:
-        result = ml_service.simulate_mitigation(req.ndvi, req.ndbi, req.actions)
+        result = ml_service.simulate_mitigation(
+            req.ndvi, req.ndbi, req.actions,
+            lat=req.lat,
+            lst_celsius=req.lst_celsius,
+            intensities=req.intensities,
+        )
 
         logger.info(
             "ML simulate: NDVI=%.3f  NDBI=%.3f  actions=%s  "
@@ -135,6 +140,11 @@ def ml_simulate(req: MLSimulateRequest) -> MLSimulateResponse:
             result["temperature_reduction"],
         )
 
+        breakdown = [
+            MLSimulateActionBreakdown(**b)
+            for b in (result.get("per_action_breakdown") or [])
+        ]
+
         return MLSimulateResponse(
             original_temperature=result["original_temperature"],
             new_temperature=result["new_temperature"],
@@ -142,6 +152,7 @@ def ml_simulate(req: MLSimulateRequest) -> MLSimulateResponse:
             modified_ndvi=result["modified_ndvi"],
             modified_ndbi=result["modified_ndbi"],
             applied_actions=result["applied_actions"],
+            per_action_breakdown=breakdown,
         )
 
     except HTTPException:
