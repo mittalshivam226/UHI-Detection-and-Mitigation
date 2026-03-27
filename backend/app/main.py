@@ -9,8 +9,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analyze, simulate, hotspots
-from app.services import gee_service
+from app.api.routes import analyze, simulate, hotspots, ml_routes
+from app.services import gee_service, ml_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,9 +40,10 @@ app.add_middleware(
 )
 
 # ── Routers ──────────────────────────────────────────────────────────────────
-app.include_router(analyze.router,   prefix="/api", tags=["Analysis"])
-app.include_router(simulate.router,  prefix="/api", tags=["Simulation"])
-app.include_router(hotspots.router,  prefix="/api", tags=["Hotspots"])
+app.include_router(analyze.router,     prefix="/api", tags=["Analysis"])
+app.include_router(simulate.router,    prefix="/api", tags=["Simulation"])
+app.include_router(hotspots.router,    prefix="/api", tags=["Hotspots"])
+app.include_router(ml_routes.router,   prefix="/ml",  tags=["ML — UHI Detection"])
 
 
 # ── Startup ──────────────────────────────────────────────────────────────────
@@ -53,6 +54,12 @@ async def startup():
         logger.info("✅ Google Earth Engine ready")
     else:
         logger.warning("⚠️  GEE init failed — responses will use fallback data")
+
+    ml_ok = ml_service.load_models()
+    if ml_ok:
+        logger.info("✅ ML models loaded (RF classifier + regressor)")
+    else:
+        logger.warning("⚠️  ML models not found — run collect_dataset.py then train_model.py")
 
 
 # ── Core endpoints ───────────────────────────────────────────────────────────
@@ -67,5 +74,12 @@ def root():
         "service": "Urban Heat Intelligence System API",
         "version": "2.0.0",
         "docs": "/docs",
-        "routes": ["/api/analyze-location", "/api/simulate", "/api/simulate/actions"],
+        "routes": [
+            "/api/analyze-location",
+            "/api/simulate",
+            "/api/simulate/actions",
+            "/ml/analyze-location",
+            "/ml/simulate",
+            "/ml/status",
+        ],
     }

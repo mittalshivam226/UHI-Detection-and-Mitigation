@@ -1,0 +1,26 @@
+{
+  "classifier_features": [
+    "lst",
+    "ndvi",
+    "ndbi"
+  ],
+  "regressor_features": {
+    "ndvi": 0.0614,
+    "ndbi": 0.0552,
+    "abs_lat": 0.058,
+    "rural_lst_mean": 0.8253
+  },
+  "classifier_importance": {
+    "lst": 0.4239,
+    "ndvi": 0.2682,
+    "ndbi": 0.3079
+  },
+  "regressor_importance": {
+    "ndvi": 0.0614,
+    "ndbi": 0.0552,
+    "abs_lat": 0.058,
+    "rural_lst_mean": 0.8253
+  },
+  "dataset_rows": 927,
+  "uhi_positive_rate": 0.479
+}
