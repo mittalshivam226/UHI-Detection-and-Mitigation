@@ -88,26 +88,33 @@ class MLAnalyzeRequest(BaseModel):
 
 
 class MLEnvironmentalData(BaseModel):
-    lst_celsius: float = Field(..., description="Land Surface Temperature in °C (Landsat 8/9)")
-    ndvi: float        = Field(..., description="Normalized Difference Vegetation Index (Sentinel-2)")
-    ndbi: float        = Field(..., description="Normalized Difference Built-up Index (Sentinel-2)")
-    data_source: str   = Field(..., description="'gee' | 'partial_fallback' | 'fallback'")
+    lst_celsius: float     = Field(..., description="Land Surface Temperature in °C (Landsat 8/9)")
+    ndvi: float            = Field(..., description="Normalized Difference Vegetation Index (Sentinel-2)")
+    ndbi: float            = Field(..., description="Normalized Difference Built-up Index (Sentinel-2)")
+    data_source: str       = Field(..., description="'gee' | 'partial_fallback' | 'fallback'")
+    # v2 extended features
+    evi: Optional[float]            = Field(default=None, description="Enhanced Vegetation Index (Sentinel-2)")
+    elevation: Optional[float]      = Field(default=None, description="Mean elevation in metres (NASA SRTM 30m)")
+    ntl: Optional[float]            = Field(default=None, description="Nighttime lights radiance nW/cm²/sr (VIIRS)")
+    rural_lst_mean: Optional[float] = Field(default=None, description="Rural buffer mean LST °C (3–15 km annulus)")
+    lst_delta: Optional[float]      = Field(default=None, description="Urban-rural LST anomaly °C (lst - rural_lst_mean)")
 
 
 class MLAnalyzeResponse(BaseModel):
     coordinates: Dict[str, float]
     environmental_data: MLEnvironmentalData
     # Classifier outputs
-    uhi_detected: bool        = Field(..., description="True if the RF classifier labels location as UHI")
+    uhi_detected: bool        = Field(..., description="True if the XGBoost classifier labels location as UHI")
     uhi_probability: float    = Field(..., description="Probability of UHI (0–1) from classifier")
     model_confidence: str     = Field(..., description="'high' | 'medium' | 'low'")
+    model_version: str        = Field(default="v2", description="ML pipeline version — v1 (3 features) or v2 (6 features)")
     # Regressor outputs
-    predicted_temperature: float = Field(..., description="LST predicted by RF regressor from NDVI/NDBI")
+    predicted_temperature: float = Field(..., description="LST predicted by RF regressor from NDVI/NDBI/etc.")
     # Combined score
     uhi_score: float          = Field(..., description="Composite UHI severity score 0–1")
     # Optional diagnostics
     feature_importance: Optional[Dict[str, float]] = Field(
-        default=None, description="Classifier feature importance (lst, ndvi, ndbi)"
+        default=None, description="Classifier feature importance (lst_delta, ndvi, ndbi, evi, elevation, ntl)"
     )
 
 
@@ -118,6 +125,11 @@ class MLSimulateRequest(BaseModel):
     lst_celsius: Optional[float]             = Field(default=None, description="Actual GEE LST to use as baseline (°C)")
     lat: float                               = Field(default=0.0, description="Latitude for climate-zone proxy")
     intensities: Optional[Dict[str, float]]  = Field(default=None, description="Per-action intensity 0-100")
+    # v2 extended features for regressor (optional — improves prediction accuracy)
+    evi: Optional[float]            = Field(default=None, description="Enhanced Vegetation Index")
+    elevation: Optional[float]      = Field(default=None, description="Elevation in metres (SRTM)")
+    ntl: Optional[float]            = Field(default=None, description="Nighttime lights radiance (VIIRS)")
+    rural_lst_mean: Optional[float] = Field(default=None, description="Rural buffer mean LST °C (for regressor)")
 
 
 class MLSimulateActionBreakdown(BaseModel):

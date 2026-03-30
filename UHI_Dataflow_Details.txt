@@ -1,0 +1,108 @@
+UHI Detection & Mitigation System - Detailed Dataflow Document
+Use this document to generate Data Flow Diagrams (DFD) (Level 0, 1, 2) and Component Diagrams.
+
+==================================================
+1. SYSTEM COMPONENTS & ENTITIES (Level 0 Context)
+==================================================
+* External Entities:
+  - User (Urban Planner, Researcher): Interacts with the Frontend UI.
+  - Google Earth Engine (GEE): External satellite imagery provider (Landsat 8/9, Sentinel-2).
+* Top-Level Process:
+  - UHI Intelligence System: Central system that takes user coordinates and mitigation configs, requests satellite data, runs ML inference, and returns UHI insights.
+
+==================================================
+2. MAJOR DATA STORES (Databases & Files)
+==================================================
+DS1: ML Models Store (Local File System)
+  - `uhi_classifier.pkl` (Random Forest for Hotspot Detection)
+  - `temp_regressor.pkl` (Random Forest for Temp Prediction)
+  - `scaler.pkl` (StandardScaler for input normalization)
+DS2: Thresholds & Configuration (Backend Code Config)
+  - Contains LST, NDVI, NDBI thresholds and Simulation cooling capacity (min_c, max_c).
+
+==================================================
+3. LEVEL 1 DATA FLOW (Core Sub-systems)
+==================================================
+Process 1 (P1): Frontend Client Interaction
+Process 2 (P2): API Gateway / Routing (FastAPI)
+Process 3 (P3): GEE Data Extraction Service
+Process 4 (P4): Machine Learning Inference Service
+Process 5 (P5): Diagnostic Analysis & Recommendation Service
+Process 6 (P6): Mitigation Simulation Service
+
+--- Data Flow Connections ---
+
+[User] -> (Coordinates / Polygon, Mitigation Actions, Report Requests) -> [P1]
+[P1] -> (HTTP GET/POST Requests) -> [P2]
+
+[P2] -> (Lat, Lng requests) -> [P3]
+[P3] -> (API Queries via Service Account) -> [Google Earth Engine]
+[Google Earth Engine] -> (Raw LST, NDVI, NDBI Median pixels over time window) -> [P3]
+[P3] -> (Extracted numeric features: lst, ndvi, ndbi) -> [P2]
+
+[P2] -> (Features: lst, ndvi, ndbi) -> [P4]
+[DS1] -> (Loaded ML Models) -> [P4]
+[P4] -> (Outputs: UHI Probability, Predicted Temp, Hotspot Boolean) -> [P2]
+
+[P2] -> (Features & ML Outputs) -> [P5]
+[DS2] -> (Predefined classification rules) -> [P5]
+[P5] -> (Outputs: Environmental Causes, Textual Recommendations) -> [P2]
+
+[P2] -> (Mitigation parameters + Original Features/Temp) -> [P6]
+[P6] -> (Outputs: Counterfactual Temp, Modified Features, Per-action Breakdown) -> [P2]
+
+[P2] -> (Aggregated JSON Response Payload) -> [P1]
+[P1] -> (Visual Dashboards, Map Layers, HTML Report) -> [User]
+
+==================================================
+4. LEVEL 2 DATA FLOW (Detailed Feature Extraction & ML)
+==================================================
+Inside P3 (GEE Extraction):
+  - 3.1 Fetch Landsat Collection -> Filter Bounds, Dates, Cloud Cover -> Compute Median -> Math Transformation (Kelvin to Celsius) -> Extract LST
+  - 3.2 Fetch Sentinel-2 Collection -> Filter Bounds, Dates, Cloud Cover -> Compute Median -> Math Transformation (Normalized Difference) -> Extract NDVI, NDBI
+  - Flow: (Lat, Lng) -> 3.1 & 3.2 -> (LST_C, NDVI, NDBI)
+
+Inside P4 (ML Inference):
+  - 4.1 Feature Scaling: (LST, NDVI, NDBI) -> `scaler.transform()` -> Scaled Array
+  - 4.2 Classification: Scaled Array -> `clf.predict_proba()` -> UHI Score & Boolean
+  - 4.3 Regression Setup: (NDVI, NDBI, Abs_Lat, Rural_Mean) -> Feature Vector Array
+  - 4.4 Regression: Feature Vector Array -> `reg.predict()` -> Baseline Target Temp
+  - Flow: P3 Outputs -> 4.1 -> 4.2 & 4.4 -> Combined ML Output Dictionary
+
+Inside P6 (Mitigation Simulation):
+  - 6.1 Action Mapping: Lookup requested string actions (e.g., 'trees', 'cool_roof') against predefined `ACTION_DELTAS` and max cooling bounds.
+  - 6.2 Intensity Scaling: `(max_c - min_c) * (Intensity/100)`.
+  - 6.3 Metric Update: Modify base Temp, NDVI, and NDBI via subtraction/addition limits.
+  - Flow: (Base Parameters + Action Config) -> 6.1 -> 6.2 -> 6.3 -> Simulated Output Dictionary
+
+==================================================
+5. KEY DATA STRUCTURES (Payloads)
+==================================================
+Request Payload (Analysis):
+  { "lat": Float, "lng": Float, "radius": Integer }
+
+Response Payload (Full Report):
+  {
+    "coordinates": {"lat", "lng"},
+    "metrics": {"lst", "ndvi", "ndbi"},
+    "analysis": {
+      "heat_classification": String,
+      "vegetation_level": String,
+      "urban_density": String,
+      "uhi_detected": Boolean,
+      "causes": List[Object]
+    },
+    "ml_insights": {
+      "uhi_probability": Float,
+      "model_confidence": String,
+      "predicted_baseline_temp": Float,
+      "severity_score": Float
+    },
+    "recommendations": List[Object],
+    "simulation": {
+      "applied_actions": List[String],
+      "original_temp": Float,
+      "new_temp": Float,
+      "reduction": Float
+    }
+  }

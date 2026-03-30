@@ -1,26 +1,56 @@
 {
+  "model_version": "v2",
+  "classifier_algorithm": "XGBoost",
   "classifier_features": [
-    "lst",
+    "lst_delta",
     "ndvi",
-    "ndbi"
+    "ndbi",
+    "evi",
+    "elevation",
+    "ntl"
   ],
   "regressor_features": {
-    "ndvi": 0.0614,
-    "ndbi": 0.0552,
-    "abs_lat": 0.058,
-    "rural_lst_mean": 0.8253
+    "ndvi": 0.0432,
+    "ndbi": 0.0428,
+    "evi": 0.0197,
+    "elevation": 0.0303,
+    "ntl": 0.04,
+    "abs_lat": 0.0448,
+    "rural_lst_mean": 0.7792
   },
   "classifier_importance": {
-    "lst": 0.4239,
-    "ndvi": 0.2682,
-    "ndbi": 0.3079
+    "lst_delta": 0.8193,
+    "ndvi": 0.0308,
+    "ndbi": 0.0338,
+    "evi": 0.0376,
+    "elevation": 0.048,
+    "ntl": 0.0306
   },
   "regressor_importance": {
-    "ndvi": 0.0614,
-    "ndbi": 0.0552,
-    "abs_lat": 0.058,
-    "rural_lst_mean": 0.8253
+    "ndvi": 0.0432,
+    "ndbi": 0.0428,
+    "evi": 0.0197,
+    "elevation": 0.0303,
+    "ntl": 0.04,
+    "abs_lat": 0.0448,
+    "rural_lst_mean": 0.7792
   },
-  "dataset_rows": 927,
-  "uhi_positive_rate": 0.479
+  "classifier_metrics": {
+    "accuracy": 0.9349,
+    "precision": 0.91,
+    "recall": 0.8796,
+    "f1": 0.8946,
+    "roc_auc": 0.985,
+    "cv_f1_mean": 0.9435,
+    "cv_f1_std": 0.0153
+  },
+  "regressor_metrics": {
+    "rmse": 2.0828,
+    "mae": 1.4117,
+    "r2": 0.9416,
+    "cv_rmse": 4.6622
+  },
+  "dataset_rows": 4882,
+  "uhi_positive_rate": 0.4494,
+  "num_cities": 62
 }

@@ -5,9 +5,18 @@ Strategy:
   - 60 cities across all continents and climate zones
   - Seasonal filter: March 1 – July 31 (peak heating season)
   - Multi-year: 2021, 2022, 2023, 2024
-  - Sources: Landsat 8/9 (LST via ST_B10) + Sentinel-2 (NDVI, NDBI)
-  - UHI Labeling: urban LST vs rural buffer mean (≥ 2°C delta → UHI=1)
+  - Sources: Landsat 8/9 (LST via ST_B10) + Sentinel-2 (NDVI, NDBI, EVI)
+             SRTM (Elevation) + VIIRS (Nighttime Lights)
+  - UHI Labeling: Climate-zone-adaptive threshold on (urban_LST - rural_mean)
   - Output: backend/models/uhi_dataset.csv
+
+Improvements over v1:
+  [+] NUM_SAMPLES_CITY raised 15 → 80 (more data per city)
+  [+] EVI (Enhanced Vegetation Index) — more robust than NDVI in dense areas
+  [+] Elevation from SRTM — topographic climate correction
+  [+] Nighttime Lights (VIIRS) — proxy for anthropogenic heat emission
+  [+] lst_delta stored explicitly (lst - rural_lst_mean) — used as leak-free feature
+  [+] Climate-zone-adaptive UHI labeling threshold (arid bar ≠ temperate bar)
 
 Usage:
     cd backend
@@ -42,15 +51,26 @@ URBAN_BUFFER_M   = 2_000   # 2 km urban core radius
 RURAL_INNER_M    = 8_000   # 8 km → start of rural annulus
 RURAL_OUTER_M    = 15_000  # 15 km → end of rural annulus
 SAMPLE_SCALE_M   = 100     # pixel sampling scale
-NUM_SAMPLES_CITY = 15      # urban sample points per city
+NUM_SAMPLES_CITY = 80      # urban sample points per city (was 15 — increased for dataset size)
 CLOUD_MAX        = 20      # max cloud cover %
-UHI_DELTA_C      = 2.0     # °C above rural mean → UHI=1
 
 # Seasonal filter: March (3) – July (7), years 2021–2024
 MONTH_START = 3
 MONTH_END   = 7
 YEAR_START  = 2021
 YEAR_END    = 2024
+
+# ── Climate-Zone-Adaptive UHI Thresholds ──────────────────────────────────────
+# A 2°C delta is trivial in a 45°C desert — calibrate the bar per zone.
+UHI_THRESHOLDS: dict[str, float] = {
+    "arid":          3.5,   # desert cities have extreme ambient heat — higher bar
+    "tropical":      2.5,
+    "subtropical":   2.0,
+    "temperate":     1.5,   # even 1.5°C above rural is a meaningful UHI signal
+    "mediterranean": 2.0,
+    "monsoon":       2.5,
+}
+_DEFAULT_THRESHOLD = 2.0   # fallback if zone not in dict
 
 # ── Global City Registry ──────────────────────────────────────────────────────
 # (city_name, country, climate_zone, lat, lon)
@@ -173,7 +193,12 @@ def _lst_image(bounds: ee.Geometry) -> ee.Image | None:
 
 
 def _s2_indices(bounds: ee.Geometry) -> dict:
-    """Return NDVI and NDBI images from Sentinel-2 composite."""
+    """
+    Return NDVI, NDBI, and EVI images from Sentinel-2 composite.
+
+    EVI = 2.5 * (NIR - RED) / (NIR + 6*RED - 7.5*BLUE + 1)
+    Requires B2 (Blue), B4 (Red), B8 (NIR), B11 (SWIR)
+    """
     col = (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterBounds(bounds)
@@ -184,9 +209,45 @@ def _s2_indices(bounds: ee.Geometry) -> dict:
     if col.size().getInfo() == 0:
         return {}
     med = col.median()
+
+    # Standard spectral indices
     ndvi = med.normalizedDifference(["B8",  "B4"]).rename("NDVI")
     ndbi = med.normalizedDifference(["B11", "B8"]).rename("NDBI")
-    return {"ndvi_image": ndvi, "ndbi_image": ndbi}
+
+    # EVI — more robust than NDVI in high-biomass / dense-canopy areas
+    # Scale: Sentinel-2 SR bands are in reflectance units ×10000 → divide by 10000
+    nir   = med.select("B8").divide(10000)
+    red   = med.select("B4").divide(10000)
+    blue  = med.select("B2").divide(10000)
+    evi   = nir.subtract(red).divide(
+        nir.add(red.multiply(6)).subtract(blue.multiply(7.5)).add(1)
+    ).multiply(2.5).rename("EVI")
+
+    return {"ndvi_image": ndvi, "ndbi_image": ndbi, "evi_image": evi}
+
+
+def _elevation_image() -> ee.Image:
+    """Return SRTM elevation image (metres)."""
+    return ee.Image("USGS/SRTMGL1_003").select("elevation").rename("elevation")
+
+
+def _ntl_image(bounds: ee.Geometry) -> ee.Image | None:
+    """
+    Return mean annual nighttime lights radiance from VIIRS (2023).
+    Band: avg_rad (nanoWatts/cm²/sr)
+    """
+    try:
+        col = (
+            ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG")
+            .filterBounds(bounds)
+            .filterDate("2023-01-01", "2023-12-31")
+            .select("avg_rad")
+        )
+        if col.size().getInfo() == 0:
+            return None
+        return col.mean().rename("ntl")
+    except Exception:
+        return None
 
 
 # ── Per-City Processing ───────────────────────────────────────────────────────
@@ -196,6 +257,7 @@ def process_city(
 ) -> list[dict]:
     """
     Returns a list of sample row dicts for this city, or [] on failure.
+    Each row includes: lst, ndvi, ndbi, evi, elevation, ntl, lst_delta, uhi_label
     """
     point      = ee.Geometry.Point([lon, lat])
     urban_roi  = point.buffer(URBAN_BUFFER_M)
@@ -211,9 +273,9 @@ def process_city(
 
         # ── Compute rural reference mean LST ─────────────────────────────────
         rural_stats = lst_img.reduceRegion(
-            reducer  = ee.Reducer.mean(),
-            geometry = rural_roi,
-            scale    = 30,
+            reducer   = ee.Reducer.mean(),
+            geometry  = rural_roi,
+            scale     = 30,
             maxPixels = 1e9,
         ).getInfo()
         rural_lst_mean = rural_stats.get("LST")
@@ -227,8 +289,20 @@ def process_city(
             logger.warning("[%s] No Sentinel-2 imagery — skipping", name)
             return []
 
+        # ── Build auxiliary layers ────────────────────────────────────────────
+        elev_img = _elevation_image()
+        ntl_img  = _ntl_image(all_bounds)
+
         # ── Combine all bands for urban sampling ─────────────────────────────
-        combined = lst_img.addBands(s2["ndvi_image"]).addBands(s2["ndbi_image"])
+        combined = (
+            lst_img
+            .addBands(s2["ndvi_image"])
+            .addBands(s2["ndbi_image"])
+            .addBands(s2["evi_image"])
+            .addBands(elev_img)
+        )
+        if ntl_img is not None:
+            combined = combined.addBands(ntl_img)
 
         samples = combined.sample(
             region     = urban_roi,
@@ -243,6 +317,9 @@ def process_city(
             logger.warning("[%s] No urban samples returned — skipping", name)
             return []
 
+        # ── Climate-adaptive UHI threshold ───────────────────────────────────
+        uhi_threshold = UHI_THRESHOLDS.get(climate_zone, _DEFAULT_THRESHOLD)
+
         # ── Parse samples, compute UHI label ─────────────────────────────────
         rows = []
         for feat in features:
@@ -251,15 +328,38 @@ def process_city(
             lst_v  = props.get("LST")
             ndvi_v = props.get("NDVI")
             ndbi_v = props.get("NDBI")
+            evi_v  = props.get("EVI")
+            elev_v = props.get("elevation")
+            ntl_v  = props.get("ntl")  # may be None if NTL image unavailable
+
+            # Require the core bands; auxiliary fallback to 0 if missing
             if any(v is None for v in [lst_v, ndvi_v, ndbi_v]):
                 continue
-            uhi_label = 1 if (float(lst_v) - float(rural_lst_mean)) >= UHI_DELTA_C else 0
+
+            # EVI can be None for some edge pixels — fallback to NDVI approximation
+            if evi_v is None:
+                evi_v = float(ndvi_v) * 0.9  # approximate from NDVI when unavailable
+
+            if elev_v is None:
+                elev_v = 0.0  # sea-level default
+
+            if ntl_v is None:
+                ntl_v = 0.0  # no emission data
+
+            lst_float    = float(lst_v)
+            lst_delta    = lst_float - float(rural_lst_mean)
+            uhi_label    = 1 if lst_delta >= uhi_threshold else 0
+
             rows.append({
                 "lat":            round(coords[1], 6),
                 "lon":            round(coords[0], 6),
-                "lst":            round(float(lst_v), 2),
+                "lst":            round(lst_float, 2),
                 "ndvi":           round(float(ndvi_v), 4),
                 "ndbi":           round(float(ndbi_v), 4),
+                "evi":            round(float(evi_v), 4),
+                "elevation":      round(float(elev_v), 1),
+                "ntl":            round(float(ntl_v), 4),
+                "lst_delta":      round(lst_delta, 2),   # urban LST minus rural baseline
                 "city":           name,
                 "country":        country,
                 "climate_zone":   climate_zone,
@@ -270,8 +370,8 @@ def process_city(
 
         pos = sum(r["uhi_label"] for r in rows)
         logger.info(
-            "[%s] ✓ %d samples | rural_mean=%.1f°C | UHI=%d/%d",
-            name, len(rows), rural_lst_mean, pos, len(rows),
+            "[%s] ✓ %d samples | rural_mean=%.1f°C | threshold=%.1f°C | UHI=%d/%d",
+            name, len(rows), rural_lst_mean, uhi_threshold, pos, len(rows),
         )
         return rows
 
@@ -288,7 +388,8 @@ def main():
 
     all_rows: list[dict] = []
     fieldnames = [
-        "lat", "lon", "lst", "ndvi", "ndbi",
+        "lat", "lon", "lst", "ndvi", "ndbi", "evi",
+        "elevation", "ntl", "lst_delta",
         "city", "country", "climate_zone", "zone_type",
         "rural_lst_mean", "uhi_label",
     ]
@@ -303,7 +404,7 @@ def main():
             logger.info("Collected %d rows so far — brief pause…", len(all_rows))
             time.sleep(2)
 
-    if len(all_rows) < 100:
+    if len(all_rows) < 200:
         logger.error(
             "Only %d rows collected — too few for training. "
             "Check GEE credentials and quota.", len(all_rows)

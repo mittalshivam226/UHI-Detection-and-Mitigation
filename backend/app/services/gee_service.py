@@ -1,11 +1,20 @@
 """
-gee_service.py — Google Earth Engine integration.
+gee_service.py — Google Earth Engine integration (v2).
 
 Responsibilities:
   - Authenticate with GEE using a service account JSON key
   - Fetch Landsat 8/9 imagery and compute Land Surface Temperature (LST) in °C
-  - Fetch Sentinel-2 imagery and compute NDVI and NDBI
+  - Fetch Sentinel-2 imagery and compute NDVI, NDBI, and EVI
+  - Fetch SRTM elevation and VIIRS nighttime lights
+  - Compute rural_lst_mean for lst_delta correction
   - Return a clean dict of float values; never expose raw EE objects to callers
+
+v2 additions:
+  [+] _fetch_evi()          — Sentinel-2 Enhanced Vegetation Index
+  [+] _fetch_elevation()    — NASA SRTM 30m Digital Elevation Model
+  [+] _fetch_ntl()          — VIIRS Day/Night Band nighttime lights
+  [+] _fetch_rural_lst()    — Mean LST of rural buffer (for lst_delta)
+  [+] fetch_environmental_data() returns all 7 features consumed by v2 model
 """
 
 from __future__ import annotations
@@ -13,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_EXCEPTION
 from typing import Optional
 
 import ee
@@ -98,8 +108,8 @@ def _fetch_lst(roi: ee.Geometry) -> Optional[float]:
         return None
 
 
-def _fetch_ndvi_ndbi(roi: ee.Geometry) -> dict:
-    """Returns {'ndvi': float, 'ndbi': float}, or None values on failure."""
+def _fetch_ndvi_ndbi_evi(roi: ee.Geometry) -> dict:
+    """Returns {'ndvi': float, 'ndbi': float, 'evi': float}, or None values on failure."""
     try:
         collection = (
             ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -112,10 +122,17 @@ def _fetch_ndvi_ndbi(roi: ee.Geometry) -> dict:
 
         # NDVI = (NIR - Red) / (NIR + Red) = (B8 - B4) / (B8 + B4)
         ndvi = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
-        # NDBI = (SWIR - NIR)  / (SWIR + NIR) = (B11 - B8) / (B11 + B8)
+        # NDBI = (SWIR - NIR) / (SWIR + NIR) = (B11 - B8) / (B11 + B8)
         ndbi = image.normalizedDifference(["B11", "B8"]).rename("NDBI")
+        # EVI = 2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)  [Sentinel-2 scaled to 0-1]
+        nir  = image.select("B8").divide(10000.0)
+        red  = image.select("B4").divide(10000.0)
+        blue = image.select("B2").divide(10000.0)
+        evi  = nir.subtract(red).multiply(2.5).divide(
+            nir.add(red.multiply(6)).subtract(blue.multiply(7.5)).add(1)
+        ).rename("EVI")
 
-        combined = ndvi.addBands(ndbi)
+        combined = ndvi.addBands(ndbi).addBands(evi)
         result = combined.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=roi,
@@ -123,51 +140,213 @@ def _fetch_ndvi_ndbi(roi: ee.Geometry) -> dict:
             maxPixels=1e9,
         ).getInfo()
 
+        evi_val = result.get("EVI")
+        # Clip EVI to plausible [-1, 2] range (same as training)
+        if evi_val is not None:
+            evi_val = max(-1.0, min(2.0, float(evi_val)))
+
         return {
             "ndvi": round(float(result["NDVI"]), 3) if result.get("NDVI") is not None else None,
             "ndbi": round(float(result["NDBI"]), 3) if result.get("NDBI") is not None else None,
+            "evi":  round(evi_val, 3) if evi_val is not None else None,
         }
 
     except Exception as exc:
-        logger.warning("NDVI/NDBI fetch failed: %s", exc)
-        return {"ndvi": None, "ndbi": None}
+        logger.warning("NDVI/NDBI/EVI fetch failed: %s", exc)
+        return {"ndvi": None, "ndbi": None, "evi": None}
+
+
+def _fetch_elevation(roi: ee.Geometry) -> Optional[float]:
+    """Return mean elevation (m) from NASA SRTM 30m DEM, or None on failure."""
+    try:
+        srtm   = ee.Image("USGS/SRTMGL1_003").select("elevation")
+        result = srtm.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=roi,
+            scale=30,
+            maxPixels=1e9,
+        ).getInfo()
+        value = result.get("elevation")
+        return round(float(value), 1) if value is not None else None
+    except Exception as exc:
+        logger.warning("Elevation fetch failed: %s", exc)
+        return None
+
+
+def _fetch_ntl(roi: ee.Geometry) -> Optional[float]:
+    """
+    Return mean nighttime lights radiance from VIIRS Day/Night Band Annual
+    composite (nW/cm²/sr), or None on failure.
+    """
+    try:
+        col = (
+            ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG")
+            .filterBounds(roi)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+            .select("avg_rad")
+        )
+        image  = col.median()
+        result = image.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=roi,
+            scale=500,
+            maxPixels=1e9,
+        ).getInfo()
+        value = result.get("avg_rad")
+        return round(float(value), 4) if value is not None else None
+    except Exception as exc:
+        logger.warning("NTL fetch failed: %s", exc)
+        return None
+
+
+def _fetch_rural_lst(lat: float, lon: float, inner_km: float = 3.0, outer_km: float = 15.0) -> Optional[float]:
+    """
+    Compute the mean LST of an annular rural buffer (inner_km to outer_km)
+    around the point.  Used to derive lst_delta = urban_lst - rural_lst_mean.
+
+    The inner radius excludes the urban core; the outer ring samples
+    surrounding (typically less-urbanised) land.
+    """
+    try:
+        inner_m = inner_km * 1000
+        outer_m = outer_km * 1000
+        center  = ee.Geometry.Point([lon, lat])
+        outer   = center.buffer(outer_m)
+        inner   = center.buffer(inner_m)
+        ring    = outer.difference(inner)
+
+        col = (
+            ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+            .filterBounds(ring)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+            .filterMetadata("CLOUD_COVER", "less_than", CLOUD_COVER_MAX)
+        )
+        if col.size().getInfo() == 0:
+            col = (
+                ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+                .filterBounds(ring)
+                .filterDate(DATA_START_DATE, DATA_END_DATE)
+                .filterMetadata("CLOUD_COVER", "less_than", CLOUD_COVER_MAX)
+            )
+
+        lst_image = (
+            col.median()
+            .select("ST_B10")
+            .multiply(0.00341802)
+            .add(149.0)
+            .subtract(273.15)
+        )
+
+        result = lst_image.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=ring,
+            scale=LANDSAT_SCALE_M,
+            maxPixels=1e9,
+        ).getInfo()
+
+        value = result.get("ST_B10")
+        return round(float(value), 2) if value is not None else None
+    except Exception as exc:
+        logger.warning("Rural LST fetch failed: %s", exc)
+        return None
 
 
 # ── Fallback values (used when GEE data is unavailable) ──────────────────────
-_FALLBACK = {"lst_celsius": 34.5, "ndvi": 0.16, "ndbi": 0.22}
+_FALLBACK = {
+    "lst_celsius":    34.5,
+    "ndvi":           0.16,
+    "ndbi":           0.22,
+    "evi":            0.14,
+    "elevation":      50.0,
+    "ntl":            10.0,
+    "rural_lst_mean": 30.0,
+}
 
 
 def fetch_environmental_data(lat: float, lon: float, radius_m: int = DEFAULT_RADIUS_M) -> dict:
     """
-    Public API: fetch LST, NDVI, and NDBI for a given coordinate.
+    Public API (v2): fetch LST, NDVI, NDBI, EVI, elevation, NTL, and rural LST
+    for a given coordinate. All 7 values are needed by the v2 XGBoost model.
 
     Returns:
         {
-            "lst_celsius": float,
-            "ndvi": float,
-            "ndbi": float,
-            "data_source": "gee" | "fallback"
+            "lst_celsius":    float,   # Landsat LST
+            "ndvi":           float,   # Sentinel-2 NDVI
+            "ndbi":           float,   # Sentinel-2 NDBI
+            "evi":            float,   # Sentinel-2 EVI
+            "elevation":      float,   # SRTM elevation (m)
+            "ntl":            float,   # VIIRS nighttime lights (nW/cm²/sr)
+            "rural_lst_mean": float,   # Mean LST of rural annular buffer
+            "lst_delta":      float,   # lst_celsius - rural_lst_mean
+            "data_source":    str      # "gee" | "partial_fallback" | "fallback"
         }
     """
     if not _gee_ready:
         logger.warning("GEE not initialized — returning fallback data")
-        return {**_FALLBACK, "data_source": "fallback"}
+        fb = {**_FALLBACK, "data_source": "fallback"}
+        fb["lst_delta"] = fb["lst_celsius"] - fb["rural_lst_mean"]
+        return fb
 
     roi = _make_roi(lat, lon, radius_m)
 
-    lst = _fetch_lst(roi)
-    veg = _fetch_ndvi_ndbi(roi)
+    # ── Fetch all layers in PARALLEL to minimise total latency ───────────────
+    # Individual GEE calls each take 3-8 s.  Sequential = 20-40 s.
+    # Parallel wall time ≈ max(individual) = 8-12 s.
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        f_lst   = pool.submit(_fetch_lst,          roi)
+        f_veg   = pool.submit(_fetch_ndvi_ndbi_evi, roi)
+        f_elev  = pool.submit(_fetch_elevation,     roi)
+        f_ntl   = pool.submit(_fetch_ntl,           roi)
+        f_rural = pool.submit(_fetch_rural_lst,      lat, lon)
 
-    # If any value is missing, fill from fallback
+        # collect with per-future timeout so one slow call never blocks all
+        def _safe(future, default):
+            try:
+                return future.result(timeout=25)
+            except Exception as exc:
+                logger.warning("GEE parallel fetch failed: %s", exc)
+                return default
+
+        lst       = _safe(f_lst,   None)
+        veg       = _safe(f_veg,   {"ndvi": None, "ndbi": None, "evi": None})
+        elevation = _safe(f_elev,  None)
+        ntl       = _safe(f_ntl,   None)
+        rural_lst = _safe(f_rural, None)
+
+    # Fill missing values from fallback
+    lst_val    = lst               if lst               is not None else _FALLBACK["lst_celsius"]
+    ndvi_val   = veg["ndvi"]       if veg["ndvi"]       is not None else _FALLBACK["ndvi"]
+    ndbi_val   = veg["ndbi"]       if veg["ndbi"]       is not None else _FALLBACK["ndbi"]
+    evi_val    = veg["evi"]        if veg["evi"]        is not None else _FALLBACK["evi"]
+    elev_val   = elevation         if elevation         is not None else _FALLBACK["elevation"]
+    ntl_val    = ntl               if ntl               is not None else _FALLBACK["ntl"]
+    rural_val  = rural_lst         if rural_lst         is not None else _FALLBACK["rural_lst_mean"]
+
+    # lst_delta is the key thermal-anomaly signal for the classifier
+    lst_delta  = round(lst_val - rural_val, 3)
+
+    # Determine data quality flag
+    gee_core_ok = (lst is not None and veg["ndvi"] is not None)
+    data_source = "gee" if gee_core_ok else "partial_fallback"
+
     result = {
-        "lst_celsius": lst if lst is not None else _FALLBACK["lst_celsius"],
-        "ndvi":        veg["ndvi"] if veg["ndvi"] is not None else _FALLBACK["ndvi"],
-        "ndbi":        veg["ndbi"] if veg["ndbi"] is not None else _FALLBACK["ndbi"],
-        "data_source": "gee" if (lst is not None and veg["ndvi"] is not None) else "partial_fallback",
+        "lst_celsius":    lst_val,
+        "ndvi":           ndvi_val,
+        "ndbi":           ndbi_val,
+        "evi":            evi_val,
+        "elevation":      elev_val,
+        "ntl":            ntl_val,
+        "rural_lst_mean": rural_val,
+        "lst_delta":      lst_delta,
+        "data_source":    data_source,
     }
 
-    logger.info("GEE fetch for (%.4f, %.4f): LST=%.1f°C  NDVI=%.3f  NDBI=%.3f",
-                lat, lon, result["lst_celsius"], result["ndvi"], result["ndbi"])
+    logger.info(
+        "GEE fetch (%.4f, %.4f): LST=%.1f°C  delta=%.1f  NDVI=%.3f  NDBI=%.3f  "
+        "EVI=%.3f  Elev=%.0fm  NTL=%.2f  RuralLST=%.1f [%s]",
+        lat, lon, lst_val, lst_delta, ndvi_val, ndbi_val,
+        evi_val, elev_val, ntl_val, rural_val, data_source,
+    )
     return result
 
 

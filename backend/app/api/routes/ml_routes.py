@@ -53,45 +53,81 @@ def ml_analyze_location(req: MLAnalyzeRequest) -> MLAnalyzeResponse:
         )
 
     try:
-        # 1. Fetch real satellite data from GEE
-        raw = gee_service.fetch_environmental_data(req.lat, req.lon, req.radius_m)
-        lst  = raw["lst_celsius"]
-        ndvi = raw["ndvi"]
-        ndbi = raw["ndbi"]
-        data_source = raw.get("data_source", "unknown")
+        # 1. Fetch all v2 satellite features from GEE
+        raw            = gee_service.fetch_environmental_data(req.lat, req.lon, req.radius_m)
+        lst            = raw["lst_celsius"]
+        ndvi           = raw["ndvi"]
+        ndbi           = raw["ndbi"]
+        evi            = raw.get("evi")
+        elevation      = raw.get("elevation")
+        ntl            = raw.get("ntl")
+        rural_lst_mean = raw.get("rural_lst_mean")
+        lst_delta      = raw.get("lst_delta")
+        data_source    = raw.get("data_source", "unknown")
 
-        # 2. ML Classification — UHI detection
-        clf_result = ml_service.predict_uhi(lst, ndvi, ndbi)
+        # 2. ML Classification — UHI detection (v2: passes all 6 model features)
+        clf_result = ml_service.predict_uhi(
+            lst            = lst,
+            ndvi           = ndvi,
+            ndbi           = ndbi,
+            rural_lst_mean = rural_lst_mean,
+            evi            = evi,
+            elevation      = elevation,
+            ntl            = ntl,
+        )
 
-        # 3. ML Regression — temperature prediction from spectral indices
-        predicted_temp = ml_service.predict_temperature(ndvi, ndbi, lat=req.lat)
+        # 3. ML Regression — temperature prediction (v2: adds evi, elevation, ntl)
+        predicted_temp = ml_service.predict_temperature(
+            ndvi           = ndvi,
+            ndbi           = ndbi,
+            lat            = req.lat,
+            rural_lst_mean = rural_lst_mean,
+            evi            = evi,
+            elevation      = elevation,
+            ntl            = ntl,
+        )
 
         # 4. Composite UHI severity score (0–1)
         uhi_score = ml_service.compute_uhi_score(
             clf_result["uhi_probability"], lst, predicted_temp
         )
 
+        # Detect whether the loaded model is v1 or v2
+        status = ml_service.get_status()
+        model_ver = status.get("model_version", "v2")
+
         logger.info(
-            "ML analyze (%.4f, %.4f): LST=%.1f°C  NDVI=%.3f  NDBI=%.3f  "
-            "UHI=%s  P=%.3f  Score=%.3f",
-            req.lat, req.lon, lst, ndvi, ndbi,
+            "ML analyze [%s] (%.4f, %.4f): LST=%.1f°C  ΔT=%.1f  NDVI=%.3f  NDBI=%.3f  "
+            "EVI=%.3f  Elev=%.0fm  NTL=%.2f  UHI=%s  P=%.3f  Score=%.3f",
+            model_ver, req.lat, req.lon, lst,
+            lst_delta if lst_delta is not None else 0,
+            ndvi, ndbi,
+            evi if evi is not None else 0,
+            elevation if elevation is not None else 0,
+            ntl if ntl is not None else 0,
             clf_result["uhi_detected"], clf_result["uhi_probability"], uhi_score,
         )
 
         return MLAnalyzeResponse(
             coordinates={"lat": req.lat, "lon": req.lon, "radius_m": req.radius_m},
             environmental_data=MLEnvironmentalData(
-                lst_celsius=lst,
-                ndvi=ndvi,
-                ndbi=ndbi,
-                data_source=data_source,
+                lst_celsius    = lst,
+                ndvi           = ndvi,
+                ndbi           = ndbi,
+                data_source    = data_source,
+                evi            = evi,
+                elevation      = elevation,
+                ntl            = ntl,
+                rural_lst_mean = rural_lst_mean,
+                lst_delta      = lst_delta,
             ),
-            uhi_detected=clf_result["uhi_detected"],
-            uhi_probability=clf_result["uhi_probability"],
-            model_confidence=clf_result["model_confidence"],
-            predicted_temperature=predicted_temp,
-            uhi_score=uhi_score,
-            feature_importance=clf_result.get("feature_importance", {}),
+            uhi_detected          = clf_result["uhi_detected"],
+            uhi_probability       = clf_result["uhi_probability"],
+            model_confidence      = clf_result["model_confidence"],
+            model_version         = model_ver,
+            predicted_temperature = predicted_temp,
+            uhi_score             = uhi_score,
+            feature_importance    = clf_result.get("feature_importance", {}),
         )
 
     except HTTPException:
@@ -125,10 +161,16 @@ def ml_simulate(req: MLSimulateRequest) -> MLSimulateResponse:
 
     try:
         result = ml_service.simulate_mitigation(
-            req.ndvi, req.ndbi, req.actions,
-            lat=req.lat,
-            lst_celsius=req.lst_celsius,
-            intensities=req.intensities,
+            ndvi           = req.ndvi,
+            ndbi           = req.ndbi,
+            actions        = req.actions,
+            lat            = req.lat,
+            rural_lst_mean = getattr(req, "rural_lst_mean", None),
+            lst_celsius    = req.lst_celsius,
+            intensities    = req.intensities,
+            evi            = getattr(req, "evi", None),
+            elevation      = getattr(req, "elevation", None),
+            ntl            = getattr(req, "ntl", None),
         )
 
         logger.info(
