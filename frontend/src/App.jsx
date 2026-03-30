@@ -8,6 +8,8 @@ import LeftSidebar from './components/LeftSidebar.jsx';
 import RightSidebar from './components/RightSidebar.jsx';
 import MapView from './components/MapView.jsx';
 import DynamicLegend from './components/DynamicLegend.jsx';
+import LoadingScreen from './components/LoadingScreen.jsx';
+import { AnimatePresence } from 'framer-motion';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -114,6 +116,7 @@ export default function App() {
     hotspotsLoading, setHotspotsLoading
   } = useUHIContext();
   const [mapCenter, setMapCenter] = useState({ lat: 40.74, lng: -73.99 });
+  const [appMounted, setAppMounted] = useState(false);
 
   // Layer toggle: if turning on, fetch GEE tile URL; if turning off, clear it
   const handleLayerToggle = useCallback(async (id) => {
@@ -218,8 +221,13 @@ export default function App() {
   });
 
   return (
-    <div className="app-layout">
-      {/* ── Top Bar ── */}
+    <>
+      <AnimatePresence>
+        {!appMounted && <LoadingScreen onComplete={() => setAppMounted(true)} />}
+      </AnimatePresence>
+
+      <div className="app-layout">
+        {/* ── Top Bar ── */}
       <TopNav geocoder={geocoder} />
 
       <LeftSidebar
@@ -245,6 +253,7 @@ export default function App() {
       </div>
 
       <RightSidebar />
-    </div>
+      </div>
+    </>
   );
 }
