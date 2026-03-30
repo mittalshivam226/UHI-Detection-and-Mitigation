@@ -7,10 +7,22 @@ backend/gee-key.json
 **/__pycache__/
 backend/venv/
 *.pyc
+*.pyo
+
+# ML Model binaries (large, reproducible via train_model.py)
+backend/models/*.pkl
+backend/models/uhi_dataset*.csv
+backend/models/collect_err.txt
+backend/models/collect_log.txt
+backend/models/collect_progress.txt
+backend/models/smoke_result.txt
+backend/models/train_log.txt
+backend/models/training_log.txt
 
 # Node / Frontend
 **/node_modules/
 frontend/dist/
+frontend/.vite/
 .eslintcache
 
 # OS / Logs
@@ -25,3 +37,7 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+
+# Temp / scratch scripts
+backend/verify_v2.py
+backend/test_live_ml.py
