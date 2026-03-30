@@ -27,12 +27,21 @@ const itemVariants = {
   show:   { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 220, damping: 22 } },
 };
 
-export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onHotspotClick }) {
+export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect }) {
   const { mapTheme } = useUHIContext();
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
     : '--';
   const avgTempColor = avgTemp === '--' ? '#ff7722' : parseFloat(avgTemp) > 40 ? 'var(--secondary)' : parseFloat(avgTemp) > 36 ? '#ff7722' : 'var(--tertiary)';
+
+  const CITIES = [
+    { name: 'Scan Area', lat: null, lng: null },
+    { name: 'New York', lat: 40.7128, lng: -74.0060 },
+    { name: 'Delhi', lat: 28.6139, lng: 77.2090 },
+    { name: 'Mumbai', lat: 19.0760, lng: 72.8777 },
+    { name: 'London', lat: 51.5074, lng: -0.1278 },
+    { name: 'Tokyo', lat: 35.6762, lng: 139.6503 }
+  ];
 
   return (
     <motion.aside
@@ -114,7 +123,7 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
                 variants={itemVariants}
                 className="hotspot-card glass-panel-heavy"
                 style={{ borderLeftColor: tempColor, cursor: 'pointer', '--hover-bg': 'rgba(255,255,255,0.05)' }}
-                onClick={() => onHotspotClick && onHotspotClick(h.lat, h.lng || h.lon)}
+                onClick={() => onLocationSelect && onLocationSelect(h.lat, h.lng || h.lon)}
               >
                 <div>
                   <div className="hotspot-name">{h.name}</div>
@@ -135,7 +144,19 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
         <div className="stats-grid">
           <div className="stat-mini">
             <div className="stat-mini-label">Coverage</div>
-            <div className="stat-mini-value" style={{ color: 'var(--primary)', fontSize: 12 }}>Region</div>
+            <div className="stat-mini-value" style={{ color: 'var(--primary)', fontSize: 13, marginTop: -2 }}>
+              <select 
+                style={{ background: 'transparent', color: 'inherit', border: 'none', outline: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'inherit', color: 'var(--primary)', textAlign: 'center' }}
+                onChange={(e) => {
+                  const c = CITIES[e.target.value];
+                  if (c && c.lat && onLocationSelect) onLocationSelect(c.lat, c.lng);
+                }}
+              >
+                {CITIES.map((c, i) => (
+                  <option key={i} value={i} style={{ background: '#0a121c', color: 'var(--on-bg)' }}>{c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="stat-mini">
             <div className="stat-mini-label">Avg LST</div>

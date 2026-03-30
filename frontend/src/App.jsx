@@ -228,7 +228,7 @@ export default function App() {
         tileLoading={tileLoading}
         hotspots={hotspots}
         hotspotsLoading={hotspotsLoading}
-        onHotspotClick={(lat, lng) => {
+        onLocationSelect={(lat, lng) => {
           setFlyTo({lat, lng});
           handleMapClick(lat, lng);
         }}
