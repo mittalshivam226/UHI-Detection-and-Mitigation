@@ -511,8 +511,20 @@ def get_layer_tile_url(layer: str, lat: float, lon: float, radius_km: float = 15
         viz = {"bands": ["NDBI"], "min": "-0.5", "max": "0.5", "palette": _NDBI_PAL}
         meta = {"min": -0.5, "max": 0.5, "unit": "index", "palette": _NDBI_PAL}
 
+    elif layer == "ntl":
+        col = (
+            ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG")
+            .filterBounds(bbox)
+            .filterDate(DATA_START_DATE, DATA_END_DATE)
+        )
+        image = col.median().select("avg_rad").rename("NTL")
+        # NTL palette: dark (black/blue) -> bright (yellow/white)
+        _NTL_PAL = ["#000000", "#1a0b2e", "#440154", "#3b528b", "#21908c", "#5dc863", "#fde725", "#ffffff"]
+        viz = {"bands": ["NTL"], "min": "0", "max": "60", "palette": _NTL_PAL}
+        meta = {"min": 0, "max": 60, "unit": "nW/cm²", "palette": _NTL_PAL}
+
     else:
-        raise ValueError(f"Unknown layer: {layer!r}. Must be 'lst', 'ndvi', or 'ndbi'.")
+        raise ValueError(f"Unknown layer: {layer!r}. Must be 'lst', 'ndvi', 'ndbi', or 'ntl'.")
 
     map_id = ee.data.getMapId({"image": image, **viz})
     tile_url: str = map_id["tile_fetcher"].url_format

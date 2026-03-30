@@ -9,12 +9,12 @@ from app.services import gee_service
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-VALID_LAYERS = {"lst", "ndvi", "ndbi"}
+VALID_LAYERS = {"lst", "ndvi", "ndbi", "ntl"}
 
 
 @router.get("/layer-tiles", summary="Get GEE tile URL for a satellite layer")
 def get_layer_tiles(
-    layer: str = Query(..., description="Layer type: lst | ndvi | ndbi"),
+    layer: str = Query(..., description="Layer type: lst | ndvi | ndbi | ntl"),
     lat: float = Query(..., description="Centre latitude"),
     lon: float = Query(..., description="Centre longitude"),
     radius_km: float = Query(150.0, description="Radius in km around centre"),
@@ -23,10 +23,10 @@ def get_layer_tiles(
     Returns a GEE tile URL template (with {z}/{x}/{y}) for the requested layer,
     along with the visualization parameters (min, max, unit, palette).
 
-    Layers:
     - **lst** — Land Surface Temperature in °C (Landsat 8/9)
     - **ndvi** — Normalized Difference Vegetation Index (Sentinel-2)
     - **ndbi** — Normalized Difference Built-Up Index (Sentinel-2)
+    - **ntl** — Nighttime Lights (VIIRS)
     """
     if layer not in VALID_LAYERS:
         raise HTTPException(

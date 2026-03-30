@@ -161,7 +161,7 @@ export default function MapView({ onMapClick }) {
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    const LAYER_KEY_MAP = { heat: 'lst', veg: 'ndvi', density: 'ndbi' };
+    const LAYER_KEY_MAP = { heat: 'lst', veg: 'ndvi', density: 'ndbi', ntl: 'ntl' };
     
     Object.keys(LAYER_KEY_MAP).forEach((toggle) => {
       const tileUrl = tileLayers?.[toggle];
