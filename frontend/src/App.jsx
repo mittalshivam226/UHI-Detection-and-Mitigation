@@ -93,7 +93,7 @@ function useGeocoder(onResult) {
 }
 
 
-const LAYER_GEE_ID = { heat: 'lst', veg: 'ndvi', density: 'ndbi' };
+const LAYER_GEE_ID = { heat: 'lst', veg: 'ndvi', density: 'ndbi', ntl: 'ntl' };
 
 
 
@@ -113,6 +113,7 @@ export default function App() {
     hotspots, setHotspots,
     hotspotsLoading, setHotspotsLoading
   } = useUHIContext();
+  const [mapCenter, setMapCenter] = useState({ lat: 40.74, lng: -73.99 });
 
   // Layer toggle: if turning on, fetch GEE tile URL; if turning off, clear it
   const handleLayerToggle = useCallback(async (id) => {
@@ -232,10 +233,14 @@ export default function App() {
           setFlyTo({lat, lng});
           handleMapClick(lat, lng);
         }}
+        onScanRegion={() => handleMapClick(mapCenter.lat, mapCenter.lng)}
       />
 
       <div className="map-area">
-        <MapView onMapClick={handleMapClick} />
+        <MapView 
+          onMapClick={handleMapClick} 
+          onMapMoveEnd={(lat, lng) => setMapCenter({lat, lng})}
+        />
         <DynamicLegend />
       </div>
 

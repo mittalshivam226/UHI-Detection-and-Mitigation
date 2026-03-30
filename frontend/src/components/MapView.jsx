@@ -64,7 +64,7 @@ function ClickRipple({ pos }) {
   );
 }
 
-export default function MapView({ onMapClick }) {
+export default function MapView({ onMapClick, onMapMoveEnd }) {
   const { layers, layerOpacity, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme } = useUHIContext();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -88,10 +88,15 @@ export default function MapView({ onMapClick }) {
       setTimeout(() => setClickScreenPos(null), 1000); // clear ripple
       if (onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
     });
+
+    map.on('moveend', () => {
+      const center = map.getCenter();
+      if (onMapMoveEnd) onMapMoveEnd(center.lat, center.lng);
+    });
     
     mapInstanceRef.current = map;
     return () => { map.remove(); mapInstanceRef.current = null; };
-  }, [onMapClick]);
+  }, [onMapClick, onMapMoveEnd]);
 
   // Handle Map Theme (Dark ↔ Light)
   useEffect(() => {

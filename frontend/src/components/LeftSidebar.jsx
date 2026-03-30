@@ -42,7 +42,7 @@ function Sparkline({ color }) {
   );
 }
 
-export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect }) {
+export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect, onScanRegion }) {
   const { mapTheme, layerOpacity, setLayerOpacity } = useUHIContext();
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
@@ -134,11 +134,22 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
       <div className="sidebar-section" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div className="sidebar-section-title" style={{ margin: 0 }}>Active Hotspots</div>
-          {hotspotsLoading && (
-            <span style={{ fontSize: 9, color: 'var(--primary)', letterSpacing: '1px' }} className="loading-text">
-              SCANNING
-            </span>
-          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {hotspotsLoading && (
+              <span style={{ fontSize: 9, color: 'var(--primary)', letterSpacing: '1px' }} className="loading-text">
+                SCANNING
+              </span>
+            )}
+            <button 
+              onClick={onScanRegion}
+              title="Scan the current map area"
+              style={{ fontSize: 9, background: 'rgba(0,242,255,0.1)', border: '1px solid rgba(0,242,255,0.3)', color: 'var(--primary)', padding: '3px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: 'var(--font-display)', letterSpacing: '1px', transition: 'all 0.2s', outline: 'none' }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(0,242,255,0.2)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(0,242,255,0.1)'}
+            >
+              SCAN AREA
+            </button>
+          </div>
         </div>
 
         <motion.div variants={listVariants} initial="hidden" animate="show">
