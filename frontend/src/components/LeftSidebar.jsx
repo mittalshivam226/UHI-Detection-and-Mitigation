@@ -28,6 +28,20 @@ const itemVariants = {
   show:   { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 220, damping: 22 } },
 };
 
+function Sparkline({ color }) {
+  // Pseudo-random trend for visual effect
+  const rnd = () => Math.random() * 10;
+  const p1 = 15 - rnd(); const p2 = 15 - rnd(); 
+  const p3 = 15 - rnd(); const p4 = 15 - rnd();
+  const points = `0,${p1} 10,${p2} 20,${p3} 30,${p4} 40,8`;
+  return (
+    <svg width="40" height="20" viewBox="0 0 40 20" style={{ margin: '0 8px', overflow: 'visible', opacity: 0.7 }}>
+      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+      <circle cx="40" cy="8" r="2" fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+    </svg>
+  );
+}
+
 export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect }) {
   const { mapTheme, layerOpacity, setLayerOpacity } = useUHIContext();
   const avgTemp = hotspots.length
@@ -142,8 +156,11 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
                   <div className="hotspot-name">{h.name}</div>
                   <div className="hotspot-coord">{h.lat.toFixed(3)}° N · {Math.abs(h.lng || h.lon || 0).toFixed(3)}° W</div>
                 </div>
-                <div className="hotspot-temp" style={{ color: tempColor, textShadow: `0 0 12px ${tempColor}60` }}>
-                  {h.temp.toFixed(1)}°
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Sparkline color={tempColor} />
+                  <div className="hotspot-temp" style={{ color: tempColor, textShadow: `0 0 12px ${tempColor}60`, width: 45, textAlign: 'right' }}>
+                    {h.temp.toFixed(1)}°
+                  </div>
                 </div>
               </motion.div>
             );
