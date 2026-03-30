@@ -228,6 +228,10 @@ export default function App() {
         tileLoading={tileLoading}
         hotspots={hotspots}
         hotspotsLoading={hotspotsLoading}
+        onHotspotClick={(lat, lng) => {
+          setFlyTo({lat, lng});
+          handleMapClick(lat, lng);
+        }}
       />
 
       <div className="map-area">

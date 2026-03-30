@@ -27,7 +27,7 @@ const itemVariants = {
   show:   { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 220, damping: 22 } },
 };
 
-export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading }) {
+export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onHotspotClick }) {
   const { mapTheme } = useUHIContext();
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
@@ -111,8 +111,9 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
               <motion.div
                 key={i}
                 variants={itemVariants}
-                className="hotspot-card"
-                style={{ borderLeftColor: tempColor }}
+                className="hotspot-card glass-panel-heavy"
+                style={{ borderLeftColor: tempColor, cursor: 'pointer', '--hover-bg': 'rgba(255,255,255,0.05)' }}
+                onClick={() => onHotspotClick && onHotspotClick(h.lat, h.lng || h.lon)}
               >
                 <div>
                   <div className="hotspot-name">{h.name}</div>
