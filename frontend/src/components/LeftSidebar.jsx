@@ -32,6 +32,7 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
     : '--';
+  const avgTempColor = avgTemp === '--' ? '#ff7722' : parseFloat(avgTemp) > 40 ? 'var(--secondary)' : parseFloat(avgTemp) > 36 ? '#ff7722' : 'var(--tertiary)';
 
   return (
     <motion.aside
@@ -138,7 +139,7 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
           </div>
           <div className="stat-mini">
             <div className="stat-mini-label">Avg LST</div>
-            <div className="stat-mini-value" style={{ color: '#ff7722' }}>{avgTemp}°</div>
+            <div className="stat-mini-value" style={{ color: avgTempColor }}>{avgTemp}°</div>
           </div>
           <div className="stat-mini">
             <div className="stat-mini-label">Hotspots</div>
