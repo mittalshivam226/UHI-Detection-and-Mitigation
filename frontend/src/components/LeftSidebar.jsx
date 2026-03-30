@@ -28,7 +28,7 @@ const itemVariants = {
 };
 
 export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect }) {
-  const { mapTheme } = useUHIContext();
+  const { mapTheme, layerOpacity, setLayerOpacity } = useUHIContext();
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
     : '--';
@@ -89,10 +89,22 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
                       : 'none',
                     transition: 'filter 0.6s ease',
                   }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--on-muted)', fontFamily: 'var(--font-display)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--on-muted)', fontFamily: 'var(--font-display)', marginBottom: 8 }}>
                     <span>{meta.min}{meta.unit}</span>
                     <span style={{ color, letterSpacing: '1px' }}>SATELLITE</span>
                     <span>{meta.max}{meta.unit}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 9, color: 'var(--on-muted)', letterSpacing: '1px' }}>OPACITY</span>
+                    <input 
+                      type="range" min="0" max="1" step="0.05" 
+                      value={layerOpacity[id] ?? 0.85}
+                      onChange={(e) => setLayerOpacity(p => ({...p, [id]: parseFloat(e.target.value)}))}
+                      style={{ flex: 1, accentColor: color }}
+                    />
+                    <span style={{ fontSize: 9, color: 'var(--on-muted)', width: 24, textAlign: 'right', fontFamily: 'var(--font-display)' }}>
+                      {Math.round((layerOpacity[id] ?? 0.85)*100)}%
+                    </span>
                   </div>
                 </div>
               ) : (

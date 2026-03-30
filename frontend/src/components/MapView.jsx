@@ -65,7 +65,7 @@ function ClickRipple({ pos }) {
 }
 
 export default function MapView({ onMapClick }) {
-  const { layers, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme } = useUHIContext();
+  const { layers, layerOpacity, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme } = useUHIContext();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const baseTileRef = useRef(null);
@@ -166,7 +166,8 @@ export default function MapView({ onMapClick }) {
     Object.keys(LAYER_KEY_MAP).forEach((toggle) => {
       const tileUrl = tileLayers?.[toggle];
       if (tileUrl && !tileLayersRef.current[toggle]) {
-        const tl = L.tileLayer(tileUrl, { opacity: 0.65, className: `tile-layer-${toggle}` });
+        const opacity = layerOpacity?.[toggle] ?? 0.85;
+        const tl = L.tileLayer(tileUrl, { opacity, className: `tile-layer-${toggle}` });
         tl.addTo(map);
         tileLayersRef.current[toggle] = tl;
       } else if (!tileUrl && tileLayersRef.current[toggle]) {
@@ -174,7 +175,17 @@ export default function MapView({ onMapClick }) {
         delete tileLayersRef.current[toggle];
       }
     });
-  }, [tileLayers]);
+  }, [tileLayers, layerOpacity]);
+
+  // Handle Opacity changes dynamically for existing layers
+  useEffect(() => {
+    Object.keys(tileLayersRef.current).forEach(toggle => {
+      const layer = tileLayersRef.current[toggle];
+      if (layer && layerOpacity && layerOpacity[toggle] !== undefined) {
+        layer.setOpacity(layerOpacity[toggle]);
+      }
+    });
+  }, [layerOpacity]);
 
   // WOW MOMENT: Visual Simulation Overlay
   // Crossfade "cooled" tile layer when simulation active

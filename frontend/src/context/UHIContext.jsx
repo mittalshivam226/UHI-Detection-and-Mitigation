@@ -21,6 +21,7 @@ export function UHIProvider({ children }) {
 
   // Map Layers & Hotspots
   const [layers, setLayers] = useState({ heat: true, veg: false, density: false });
+  const [layerOpacity, setLayerOpacity] = useState({ heat: 0.85, veg: 0.85, density: 0.85 });
   const [tileLayers, setTileLayers] = useState({});
   const [tileMeta, setTileMeta] = useState({});
   const [tileLoading, setTileLoading] = useState({});
@@ -47,6 +48,7 @@ export function UHIProvider({ children }) {
     loading, setLoading,
     mlLoading, setMlLoading,
     layers, setLayers,
+    layerOpacity, setLayerOpacity,
     tileLayers, setTileLayers,
     tileMeta, setTileMeta,
     tileLoading, setTileLoading,
