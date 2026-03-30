@@ -76,6 +76,14 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
 
   const [clickScreenPos, setClickScreenPos] = useState(null);
 
+  const onMapClickRef = useRef(onMapClick);
+  const onMapMoveEndRef = useRef(onMapMoveEnd);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+    onMapMoveEndRef.current = onMapMoveEnd;
+  }, [onMapClick, onMapMoveEnd]);
+
   // Initialize Map
   useEffect(() => {
     if (mapInstanceRef.current) return;
@@ -86,17 +94,17 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     map.on('click', e => {
       setClickScreenPos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
       setTimeout(() => setClickScreenPos(null), 1000); // clear ripple
-      if (onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
+      if (onMapClickRef.current) onMapClickRef.current(e.latlng.lat, e.latlng.lng);
     });
 
     map.on('moveend', () => {
       const center = map.getCenter();
-      if (onMapMoveEnd) onMapMoveEnd(center.lat, center.lng);
+      if (onMapMoveEndRef.current) onMapMoveEndRef.current(center.lat, center.lng);
     });
     
     mapInstanceRef.current = map;
     return () => { map.remove(); mapInstanceRef.current = null; };
-  }, [onMapClick, onMapMoveEnd]);
+  }, []);
 
   // Handle Map Theme (Dark ↔ Light)
   useEffect(() => {
