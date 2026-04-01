@@ -4,101 +4,86 @@ Use this document to generate UML Activity Diagrams, Sequence Diagrams, and Stat
 ==================================================
 1. SYSTEM ACTORS
 ==================================================
-- Client / End User: Interacts via the Web Browser.
-- Frontend App (React/Vite): Handles state, maps, rendering.
-- Backend API (FastAPI): Exposes REST endpoints.
-- ML Service (Python): Executes Random Forest predictions.
-- GEE Service (Google Earth Engine API): External cloud computation engine.
-- Simulation Engine: Calculates mitigation strategies.
+- Client / End User: Urban planner or researcher via Web Browser.
+- Frontend Control Room (React/Vite): Handles state, Three.js 3D renderings, Maps.
+- Backend API (FastAPI): High-concurrency ML orchestrator.
+- ML Service (XGBoost / Shapley): Executes ML classification and XAI logic.
+- GEE Service (Google Earth Engine): External thread-pooled computation.
+- Simulation Engine: Python service resolving mitigation vectors.
 
 ==================================================
-2. SEQUENCE OF OPERATIONS: CORE WORKFLOW (UHI Analysis)
+2. SEQUENCE OF OPERATIONS: CORE XAI WORKFLOW
 ==================================================
-1. User clicks a point on the interactive map OR types in coordinates/city name.
-2. Frontend updates internal state (`selectedCoordinate`).
-3. Frontend UI displays a loading spinner ("Analyzing Urban Heat...").
-4. Frontend sends an HTTP GET request to `/api/v1/analyze?lat=X&lng=Y`.
-5. Backend API Gateway receives the request and triggers `AnalysisController`.
-6. Backend queries `GEEService.extract_metrics(lat, lng)`:
-   a. Authenticate with Google Earth Engine using Service Account JSON.
-   b. Define a 1000m buffer zone (Geometry) around lat/lng.
-   c. Build image collection for Landsat 8/9 & Sentinel-2.
-   d. Apply Cloud Cover (<20%) and Date Range filters.
-   e. Calculate Median composites.
-   f. Execute GEE `reduceRegion(ee.Reducer.mean())` to calculate exactly LST, NDVI, and NDBI at that point.
-7. `GEEService` returns the raw metrics (lst, ndvi, ndbi) back to Controller.
-8. Backend Controller passes metrics to `MLService.predict_uhi(lst, ndvi, ndbi)`:
-   a. Normalize inputs using `StandardScaler`.
-   b. Run `RandomForestClassifier` to determine UHI probability.
-   c. Run `RandomForestRegressor` to estimate baseline thermal behavior.
-9. Backend Controller passes metrics to `AnalysisService.identify_causes(...)`:
-   a. Compare LST, NDVI, NDBI values against absolute thresholds.
-   b. Generate human-readable diagnostics (e.g., "Low Vegetation Coverage").
-10. Backend Controller passes detected causes to `RecommendationService`:
-   a. Map causes to actionable architectural/urban strategies (e.g., "Plant trees", "Cool Roofs").
-11. Backend packages all outputs into a single JSON schema.
-12. Frontend receives the 200 OK JSON response.
-13. Frontend disables the loading spinner.
-14. Frontend updates the Dashboard side-panel with numerical metrics, risk score, gauge charts, and ML confidence levels.
+1. User clicks a point on the interactive 3D map OR searches via Mapbox Geocoder.
+2. Frontend EnginePage updates global state (`selectedCoordinate`).
+3. Frontend UI displays a scanning animation overlay.
+4. Frontend streams an HTTP GET request to `/api/v1/ml/analyze?lat=XX&lng=YY`.
+5. Backend API Gateway receives request, parsing coordinates.
+6. Backend invokes `gee_service.fetch_environmental_data(lat, lng)`:
+   a. ThreadPoolExecutor spawns 5 parallel GEE threads.
+   b. Fetch Landsat 8/9, Sentinel-2, SRTM 30m, and VIIRS NTL.
+   c. Resolve median composites and clip all bands to 1000m buffer.
+   d. Compute `lst`, `ndvi`, `ndbi`, `evi`, `elevation`, `ntl`, `rural_lst_mean`.
+7. `GEEService` returns 7-feature dict back to backend router.
+8. Backend passes metrics to `MLService.predict_uhi(...)`:
+   a. Instantiates `shap.TreeExplainer(XGBoost)`.
+   b. Runs 7-feature arrays through XGBoost for UHI severity + binary tag.
+   c. Generates exact local `shap_values` log-odds mapping per feature.
+   d. Runs `RandomForestRegressor` for `predicted_baseline_temp`.
+9. Backend compares values against predefined environmental `causes` string sets.
+10. Backend passes detected causes to `RecommendationService` for actionable logic mapping.
+11. Backend packages XAI, ML indices, and 7-features into JSON response.
+12. Frontend intercepts 200 OK.
+13. Frontend UI (`EnginePage.jsx`) updates specific visualization components:
+    - SHAP Waterfall UI (ECharts cascading bar graph)
+    - K-Fold Variance Heartbeat (EKG-style line chart)
+    - 3D Holographic Globe
+14. System rests in "ANALYZED" state awaiting further human input.
 
 ==================================================
 3. SEQUENCE OF OPERATIONS: MITIGATION SIMULATION
 ==================================================
-1. User views the Analysis Results in the Dashboard.
-2. User toggles specific mitigation switches (e.g., "Add Green Roofs", "Apply Cool Coating") and adjusts intensity sliders.
-3. Frontend captures the array of selected actions and intensities.
-4. Frontend prepares an HTTP POST request to `/api/v1/simulate` with payload: 
-   { "current_temp": X, "actions": ["green_roof", "cool_roof"], "intensities": {"green_roof": 80, ...} }
-5. Backend API routes request to `SimulationService.simulate(...)`.
-6. For each action in the request loop:
-   a. Fetch the specific min/max cooling threshold parameters.
-   b. Apply linear scaling: `cooling = min + (max - min) * (intensity / 100)`.
-   c. Add to the `Total_Reduction` aggregator.
-7. Backend ensures minimum floor bounds (`predicted_temp = max(current_temp - Total_Reduction, 15.0)`).
-8. Backend returns Simulated JSON response tracking exact temp reductions per action.
-9. Frontend receives Simulation JSON.
-10. Frontend visually updates the "Projected Temperature" UI component and displays a comparative bar chart (Before vs. After).
+1. User interacts with UI Simulation Switches (e.g. "Add Arbor Canopies").
+2. User adjusts % adoption intensity sliders via Framer Motion.
+3. Frontend builds an array of requested interventions.
+4. Frontend executes an HTTP POST to `/api/v1/ml/simulate` containing existing `lst_celsius` and selected actions.
+5. Backend maps payload to `SimulationService.simulate()`.
+6. For each item in payload:
+   a. Calculate cooling bounded by literature limits: `reduction = max_cooling * (slider_pct/100)`.
+   b. Accumulate total thermal offset.
+7. Backend asserts an absolute minimum LST floor (temp cannot fall below 15.0°C).
+8. Backend returns JSON payload describing `.new_temp`, `.original_temp`, and `.reduction`.
+9. Frontend animates the "Counterfactual Result" numerical HUD metric without reloading.
 
 ==================================================
-4. OFFLINE ML TRAINING WORKFLOW (Data Collection & Pipeline)
+4. SEQUENCE OF OPERATIONS: LIVE TELEMETRY (Background)
 ==================================================
-Since this is highly relevant to building out the physical system context.
-1. Developer runs `collect_dataset.py`.
-2. Script iterates through a predefined list of 60 Global Cities.
-3. For each city, creates an Urban Buffer (0-2km) and Rural Annulus (8-15km).
-4. Extract 15 random random points from the Urban Buffer using `ee.sample()`.
-5. Calculate Mean LST for the Rural Annulus.
-6. Check if Urban Point LST is >= Rural Mean LST + 2°C (Set Target label = 1, else 0).
-7. Execute for all cities, respecting GEE rate limits, compile into list of dicts.
-8. Persist to Disk as `uhi_dataset.csv`.
-9. Developer runs `train_model.py`.
-10. Load clean CSV, extract Feature matrices (X) and Target arrays (y).
-11. Instantiate `StandardScaler()`, `RandomForestClassifier()`, `RandomForestRegressor()`.
-12. Fit scaler, fit models on 80% split using Cross Validation.
-13. Evaluate and plot Output Metrics to console.
-14. `joblib.dump` model files into `/backend/models/`.
+1. Independent of User Interaction, Frontend component triggers `setInterval`.
+2. Every 4.5 seconds, un-cached ping deployed to `/api/v1/data/ping`.
+3. Backend immediately responds with HTTP 200 taking ~13ms.
+4. Frontend `EnginePage.jsx` updates `latencyHistory` queue.
+5. Bottom-left ECharts line graph continually updates simulating live "Control Room" active pulse.
 
 ==================================================
-5. STATE MACHINE DIAGRAM CONTEXT (Frontend App State)
+5. STATE MACHINE DIAGRAM (React Frontend)
 ==================================================
+State: BOOTING
+- LoadingScreen displays system initialization.
+- -> Transition to IDLE upon `appMounted`.
 State: IDLE
-- Map is zoomable, no location picked.
-- Sidebar shows instructional placeholder empty state.
--> User clicks Map -> Transition to LOADING state.
-State: LOADING
-- Disable map clicks interactively.
-- Show spinner in sidebar "Fetching Satellite data...".
--> API OK -> Transition to ANALYZED state.
--> API ERROR -> Transition to ERROR state.
-State: ANALYZED
-- Dashboard fully populated (LST, NDVI, NDBI, Causes, Options).
-- Map drops a UI marker pinpoint exactly where selected.
-- "Generate Report" button becomes enabled.
--> User clicks a Mitigation Action -> Transition to SIMULATING.
+- `EnginePage` shows empty diagnostic visualizations (0 matrices).
+- Live Telemetry pulsing in corner.
+- -> User Clicks Point -> Transition to SCANNING.
+State: SCANNING
+- UI overlays block input.
+- Crosshairs rotate in map view.
+- -> API Returns 200 -> Transition to DEPLOYED.
+State: DEPLOYED
+- SHAP EChart animates waterfall variables.
+- UHI Score Gauge climbs.
+- Hologram drops anchor.
+- -> User tweaks slider -> Transition to SIMULATING.
 State: SIMULATING
-- Instantly updates "Projected Heat Level" via real-time simulation API.
--> Return to ANALYZED when changes applied.
-State: ERROR
-- Target area covered by clouds or API failure.
-- Appears as a red toast notification.
--> Reset / Dismiss -> Transition back to IDLE.
+- Instantly offsets baseline LST visualizer.
+- Action bounds clamped.
+- -> Re-renders seamlessly onto DEPLOYED.
