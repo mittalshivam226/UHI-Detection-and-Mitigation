@@ -11,12 +11,39 @@ import ReactECharts from 'echarts-for-react';
 import { Activity, Database, Server, Network, Cpu, Globe2, ScanFace, ActivityIcon } from 'lucide-react';
 import Globe from 'react-globe.gl';
 
+// ─── Simple Error Boundary to Prevent Page Disappearing ────────────────────────
+class DiagnosticBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.warn("Diagnostics UI Error Caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full w-full items-center justify-center p-4 border border-red-500/30 bg-red-500/10 rounded-xl">
+           <span className="font-mono text-xl text-red-500 font-bold tracking-widest text-center">
+             COMPONENT CRASHED<br/><span className="text-xs text-red-500/50">Details caught by ErrorBoundary</span>
+           </span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Animated purely-HTML counter for the side legend
 function AnimatedStat({ value, label, color, delay }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     let start = null;
+    let frameId;
     const duration = 2000;
     const timeout = setTimeout(() => {
       const step = (time) => {
@@ -24,11 +51,16 @@ function AnimatedStat({ value, label, color, delay }) {
         const progress = Math.min((time - start) / duration, 1);
         const ease = 1 - Math.pow(1 - progress, 4);
         setCount(ease * value);
-        if (progress < 1) requestAnimationFrame(step);
+        if (progress < 1) {
+          frameId = requestAnimationFrame(step);
+        }
       };
-      requestAnimationFrame(step);
+      frameId = requestAnimationFrame(step);
     }, delay);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      if (frameId) cancelAnimationFrame(frameId);
+    };
   }, [value, delay]);
 
   return (
@@ -109,17 +141,24 @@ function DatasetGlobe({ numDots, uhiRate }) {
   }, [numDots, uhiRate]);
 
   useEffect(() => {
+    let mounted = true;
     const initControls = () => {
-      if (globeEl.current && globeEl.current.controls && globeEl.current.controls()) {
-        globeEl.current.controls().autoRotate = true;
-        globeEl.current.controls().autoRotateSpeed = 2.0;
-        globeEl.current.controls().enableZoom = false;
-      } else {
-        // Retry if controls are not yet initialized by Three.js
-        setTimeout(initControls, 100);
+      if (!mounted) return;
+      try {
+        if (globeEl.current && typeof globeEl.current.controls === 'function' && globeEl.current.controls()) {
+          globeEl.current.controls().autoRotate = true;
+          globeEl.current.controls().autoRotateSpeed = 2.0;
+          globeEl.current.controls().enableZoom = false;
+        } else {
+          // Retry if controls are not yet initialized by Three.js
+          setTimeout(initControls, 100);
+        }
+      } catch (err) {
+        console.warn("Globe controls failed to initialize", err);
       }
     };
     initControls();
+    return () => { mounted = false; };
   }, []);
 
   return (
@@ -423,12 +462,14 @@ export default function EnginePage() {
               <p className="font-mono text-[10px] text-white/50 tracking-widest mt-1">XGBOOST ALGORITHM DIAGNOSTIC</p>
             </div>
             <div className="w-full h-[400px] lg:h-full bg-black/80">
-              <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
-                <React.Suspense fallback={null}>
-                  <Metrics3D features={features} />
-                </React.Suspense>
-                <OrbitControls enableZoom={true} enablePan={false} autoRotate={!mlData} autoRotateSpeed={1} maxPolarAngle={Math.PI / 2 - 0.1} minDistance={6} maxDistance={15} />
-              </Canvas>
+              <DiagnosticBoundary>
+                <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
+                  <React.Suspense fallback={null}>
+                    <Metrics3D features={features} />
+                  </React.Suspense>
+                  <OrbitControls enableZoom={true} enablePan={false} autoRotate={!mlData} autoRotateSpeed={1} maxPolarAngle={Math.PI / 2 - 0.1} minDistance={6} maxDistance={15} />
+                </Canvas>
+              </DiagnosticBoundary>
             </div>
           </GlassPanel>
 
@@ -472,7 +513,9 @@ export default function EnginePage() {
              
              {/* Render Globe inside boundary */}
              <div className="absolute inset-0 top-[100px] flex items-center justify-center pointer-events-auto">
-               <DatasetGlobe numDots={globalStatus?.feature_importance?.dataset_rows} uhiRate={globalStatus?.feature_importance?.uhi_positive_rate}/>
+               <DiagnosticBoundary>
+                 <DatasetGlobe numDots={globalStatus?.feature_importance?.dataset_rows} uhiRate={globalStatus?.feature_importance?.uhi_positive_rate}/>
+               </DiagnosticBoundary>
              </div>
           </GlassPanel>
 
