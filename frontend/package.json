@@ -9,7 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^9.105.6",
+    "@react-three/fiber": "^8.16.1",
+    "clsx": "^2.1.1",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
     "framer-motion": "^11.0.0",
+    "gsap": "^3.14.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
@@ -17,7 +23,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-is": "^18.3.1",
-    "recharts": "^2.12.7"
+    "react-router-dom": "^7.13.2",
+    "tailwind-merge": "^3.5.0",
+    "three": "^0.164.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

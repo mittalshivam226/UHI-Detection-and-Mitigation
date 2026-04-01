@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layers, Thermometer, TreePine, Building2, Lightbulb } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layers, Thermometer, TreePine, Building2, Lightbulb, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useUHIContext } from '../context/UHIContext.jsx';
 
@@ -44,6 +44,9 @@ function Sparkline({ color }) {
 
 export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoading, hotspots, hotspotsLoading, onLocationSelect, onScanRegion }) {
   const { mapTheme, layerOpacity, setLayerOpacity } = useUHIContext();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
     : '--';
@@ -58,6 +61,26 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
     { name: 'Tokyo', lat: 35.6762, lng: 139.6503 }
   ];
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      const data = await resp.json();
+      if (data && data.length > 0) {
+        if (onLocationSelect) onLocationSelect(parseFloat(data[0].lat), parseFloat(data[0].lon));
+        setSearchQuery('');
+      } else {
+        alert("Location not found.");
+      }
+    } catch (err) {
+      console.error("Geocoding failed:", err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
   return (
     <motion.aside
       initial={{ x: -300, opacity: 0 }}
@@ -65,6 +88,21 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
       transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
       className="left-sidebar glass-panel-heavy"
     >
+      {/* ─── Global Search ─── */}
+      <div className="sidebar-section pb-2 pt-5">
+        <form onSubmit={handleSearch} className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search Global Location"
+            className="w-full bg-black/40 border border-white/10 rounded-lg text-white text-xs font-mono px-9 py-2.5 outline-none focus:border-neon-cyan/50 focus:shadow-[0_0_15px_rgba(0,242,255,0.2)] transition-all"
+          />
+          <Search size={14} color="var(--primary)" className="absolute left-3 top-3 opacity-70" />
+          {searching && <span className="absolute right-3 top-3.5 text-[9px] text-neon-cyan tracking-widest animate-pulse">SCANNING</span>}
+        </form>
+      </div>
+
       {/* ─── Layer Controls ─── */}
       <div className="sidebar-section">
         <div className="sidebar-section-title">

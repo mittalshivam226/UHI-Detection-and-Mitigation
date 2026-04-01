@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTip,
-  LineChart, Line, ResponsiveContainer, Cell,
-} from 'recharts';
+import ReactECharts from 'echarts-for-react';
 import { useUHIContext } from '../context/UHIContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trees, Home, Droplets, MapPin, Zap, AlertTriangle, CheckCircle2, Thermometer, TreePine, Building2 } from 'lucide-react';
@@ -17,20 +14,39 @@ function ProgressBar({ pct, color }) {
 }
 
 // ─── Mini charts ─────────────────────────────────────────────────────────────
-const ChartTooltipStyle = {
-  contentStyle: { background: 'var(--bg-panel)', border: '1px solid var(--outline-light)', borderRadius: 8, fontSize: 11 },
-  labelStyle:   { color: 'var(--on-muted)' },
-  itemStyle:    { color: 'var(--on-bg)' },
-};
-
 function EnvBarChart({ env }) {
   const data = [
-    { name: 'LST (°C)', value: parseFloat(env.lst_celsius.toFixed(1)),                           fill: '#FF3B3B', max: 60 },
-    { name: 'NDVI',     value: parseFloat(((env.ndvi + 1) / 2 * 100).toFixed(1)),               fill: '#00e676', max: 100 },
-    { name: 'NDBI',     value: parseFloat(((env.ndbi + 1) / 2 * 100).toFixed(1)),               fill: '#FFD700', max: 100 },
-    ...(env.evi  != null ? [{ name: 'EVI', value: parseFloat(((env.evi + 1) / 2 * 100).toFixed(1)),  fill: '#4ade80', max: 100 }] : []),
-    ...(env.lst_delta != null ? [{ name: 'ΔT', value: parseFloat(Math.max(0, env.lst_delta * 5).toFixed(1)), fill: '#f87171', max: 100 }] : []),
+    { name: 'LST (°C)', value: parseFloat(env.lst_celsius.toFixed(1)), itemStyle: { color: '#FF3B3B' } },
+    { name: 'NDVI',     value: parseFloat(((env.ndvi + 1) / 2 * 100).toFixed(1)), itemStyle: { color: '#00e676' } },
+    { name: 'NDBI',     value: parseFloat(((env.ndbi + 1) / 2 * 100).toFixed(1)), itemStyle: { color: '#FFD700' } },
+    ...(env.evi  != null ? [{ name: 'EVI', value: parseFloat(((env.evi + 1) / 2 * 100).toFixed(1)),  itemStyle: { color: '#4ade80' } }] : []),
+    ...(env.lst_delta != null ? [{ name: 'ΔT', value: parseFloat(Math.max(0, env.lst_delta * 5).toFixed(1)), itemStyle: { color: '#f87171' } }] : []),
   ];
+
+  const option = {
+    backgroundColor: 'transparent',
+    grid: { top: 10, right: 0, bottom: 20, left: 30 },
+    tooltip: { 
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      backgroundColor: '#0a0b10', borderColor: 'rgba(0, 242, 255, 0.2)', textStyle: { color: '#fff' },
+      valueFormatter: (val) => `${val}%`
+    },
+    xAxis: { 
+      type: 'category', data: data.map(d => d.name),
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 10, interval: 0 },
+      axisLine: { show: false }, axisTick: { show: false }
+    },
+    yAxis: { 
+      type: 'value', max: 100,
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 9 },
+      splitLine: { show: false }
+    },
+    series: [{
+      type: 'bar', barWidth: 22,
+      data: data.map(d => ({ value: d.value, itemStyle: { color: d.itemStyle.color, borderRadius: [4, 4, 0, 0] } }))
+    }]
+  };
+
   return (
     <div className="panel-section">
       <div className="panel-section-header">
@@ -38,16 +54,7 @@ function EnvBarChart({ env }) {
         Index Comparison
       </div>
       <div style={{ fontSize: 10, color: 'var(--on-muted)', marginBottom: 10 }}>Values normalised 0–100%</div>
-      <ResponsiveContainer width="100%" height={110}>
-        <BarChart data={data} barSize={22} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-          <XAxis dataKey="name" tick={{ fill: 'var(--on-muted)', fontSize: 10 }} axisLine={false} tickLine={false}/>
-          <YAxis domain={[0, 100]} tick={{ fill: 'var(--on-muted)', fontSize: 9 }} axisLine={false} tickLine={false}/>
-          <RechartsTip {...ChartTooltipStyle} formatter={v => [`${v}%`]}/>
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-            {data.map((e, i) => <Cell key={i} fill={e.fill} fillOpacity={0.8}/>)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <ReactECharts option={option} style={{ height: 130, width: '100%' }} />
     </div>
   );
 }
@@ -241,19 +248,38 @@ function SimTrendChart({ currentTemp, simData }) {
     const drop = (pct / 100) * 3.0;
     return { pct: `${pct}%`, temp: parseFloat((currentTemp - drop).toFixed(1)) };
   });
+
+  const option = {
+    backgroundColor: 'transparent',
+    grid: { top: 10, right: 10, bottom: 20, left: 30 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#0a0b10', borderColor: 'rgba(0, 242, 255, 0.2)', textStyle: { color: '#fff' },
+      valueFormatter: (val) => `${val}°C`
+    },
+    xAxis: {
+      type: 'category', data: treeSteps.map(d => d.pct),
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 9 },
+      axisLine: { show: false }, axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value', min: 'dataMin', max: 'dataMax',
+      axisLabel: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 9 },
+      splitLine: { show: false }
+    },
+    series: [{
+      type: 'line', smooth: true, symbolSize: 6,
+      itemStyle: { color: '#00e676' }, lineStyle: { width: 2 },
+      data: treeSteps.map(d => d.temp)
+    }]
+  };
+
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ fontSize: 10, color: 'var(--on-muted)', marginBottom: 8, letterSpacing: '1px', textTransform: 'uppercase' }}>
         Projected Temp vs Tree Coverage
       </div>
-      <ResponsiveContainer width="100%" height={80}>
-        <LineChart data={treeSteps} margin={{ top: 0, right: 4, bottom: 0, left: -22 }}>
-          <XAxis dataKey="pct" tick={{ fill: 'var(--on-muted)', fontSize: 9 }} axisLine={false} tickLine={false}/>
-          <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--on-muted)', fontSize: 9 }} axisLine={false} tickLine={false}/>
-          <RechartsTip {...ChartTooltipStyle} formatter={v => [`${v}°C`]}/>
-          <Line type="monotone" dataKey="temp" stroke="#00e676" strokeWidth={2} dot={{ fill: '#00e676', r: 3 }} activeDot={{ r: 5 }}/>
-        </LineChart>
-      </ResponsiveContainer>
+      <ReactECharts option={option} style={{ height: 100, width: '100%' }} />
     </div>
   );
 }
@@ -415,7 +441,23 @@ export default function RightSidebar() {
     : (mlData ? (mlData.uhi_detected ? 'var(--secondary)' : 'var(--tertiary)')
       : (ana?.heat_classification === 'High' ? 'var(--secondary)' : ana?.heat_classification === 'Medium' ? '#ff7722' : 'var(--tertiary)'));
 
-  if (!env) return null;
+  if (!env) {
+    return (
+      <motion.aside initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="right-panel glass-panel-heavy" key={`${pos?.lat}${pos?.lng}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="right-panel-empty" style={{ textAlign: 'center', padding: 20 }}>
+          <div className="right-panel-empty-icon" style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+            <AlertTriangle size={32} color="#64748b" />
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, color: 'var(--on-bg)', marginBottom: 10 }}>
+            Analysis Failed
+          </div>
+          <div className="right-panel-empty-text" style={{ fontSize: 13, color: 'var(--on-muted)', lineHeight: 1.5 }}>
+            The ML backend engine did not return valid environmental data. Please ensure the Python analytics server is running to process this location.
+          </div>
+        </div>
+      </motion.aside>
+    );
+  }
   
   return (
     <motion.aside initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="right-panel glass-panel-heavy" key={`${pos?.lat}${pos?.lng}`}>

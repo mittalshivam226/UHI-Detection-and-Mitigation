@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useUHIContext } from '../context/UHIContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,8 +11,8 @@ function HoverPreview({ map }) {
   useEffect(() => {
     if (!map) return;
     const moveFn = (e) => {
-      // Offset slightly from cursor
-      setPos({ x: e.originalEvent.clientX + 15, y: e.originalEvent.clientY + 15, active: true });
+      // Offset slightly from cursor relative to map container
+      setPos({ x: e.containerPoint.x + 15, y: e.containerPoint.y + 15, active: true });
     };
     const outFn = () => setPos(p => ({ ...p, active: false }));
 
@@ -32,7 +33,7 @@ function HoverPreview({ map }) {
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.15 }}
           style={{
-            position: 'fixed', left: pos.x, top: pos.y, zIndex: 9999,
+            position: 'absolute', left: pos.x, top: pos.y, zIndex: 9999,
             pointerEvents: 'none',
           }}
           className="bg-black/80 backdrop-blur-md border border-cyan-500/50 rounded-lg px-3 py-2 shadow-[0_0_15px_rgba(0,242,255,0.3)] text-white text-xs font-mono"
@@ -47,7 +48,7 @@ function HoverPreview({ map }) {
   );
 }
 
-// Click ripple effect via fixed portal
+// Click ripple effect via absolute container placement
 function ClickRipple({ pos }) {
   if (!pos) return null;
   return (
@@ -56,7 +57,7 @@ function ClickRipple({ pos }) {
       animate={{ scale: 3, opacity: 0 }}
       transition={{ duration: 1, ease: 'easeOut' }}
       style={{
-        position: 'fixed', left: pos.x - 30, top: pos.y - 30,
+        position: 'absolute', left: pos.x - 30, top: pos.y - 30,
         width: 60, height: 60, borderRadius: '50%',
         border: '2px solid #00F2FF', pointerEvents: 'none', zIndex: 9999,
       }}
@@ -92,7 +93,7 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     baseTileRef.current = L.tileLayer(darkUrl, { subdomains: 'abcd', maxZoom: 20 }).addTo(map);
 
     map.on('click', e => {
-      setClickScreenPos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+      setClickScreenPos({ x: e.containerPoint.x, y: e.containerPoint.y });
       setTimeout(() => setClickScreenPos(null), 1000); // clear ripple
       if (onMapClickRef.current) onMapClickRef.current(e.latlng.lat, e.latlng.lng);
     });
