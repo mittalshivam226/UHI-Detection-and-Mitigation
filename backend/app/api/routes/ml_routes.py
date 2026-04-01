@@ -128,6 +128,8 @@ def ml_analyze_location(req: MLAnalyzeRequest) -> MLAnalyzeResponse:
             predicted_temperature = predicted_temp,
             uhi_score             = uhi_score,
             feature_importance    = clf_result.get("feature_importance", {}),
+            shap_values           = clf_result.get("shap_values", {}),
+            shap_base_value       = clf_result.get("shap_base_value", 0.0),
         )
 
     except HTTPException:

@@ -25,6 +25,12 @@ from typing import Dict, List, Optional
 import numpy as np
 import joblib
 
+try:
+    import shap
+    _SHAP_AVAILABLE = True
+except ImportError:
+    _SHAP_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # ── Model paths ───────────────────────────────────────────────────────────────
@@ -245,11 +251,45 @@ def predict_uhi(
     if _feat_imp and "classifier_importance" in _feat_imp:
         importance = _feat_imp["classifier_importance"]
 
+    shap_values_dict = {}
+    base_value = 0.0
+    if _SHAP_AVAILABLE and _clf is not None:
+        try:
+            # XGBoost/RF SHAP explanation
+            explainer = shap.TreeExplainer(_clf)
+            shap_vals = explainer.shap_values(X_scaled)
+            
+            if isinstance(shap_vals, list): 
+                # Scikit-learn Random Forest returns list of arrays [class_0, class_1]
+                sv = shap_vals[1][0]
+                bv = explainer.expected_value[1]
+            else:
+                # XGBoost binary classification
+                sv = shap_vals[0]
+                bv = explainer.expected_value
+                
+            if isinstance(bv, np.ndarray) and len(bv) > 0:
+                bv = bv[0]
+            elif isinstance(bv, list):
+                bv = bv[0]
+                
+            base_value = float(bv)
+            features = _CLF_FEATURES_V2 if _clf_n_features >= 6 else _CLF_FEATURES_V1
+            
+            shap_values_dict = {
+                feat: round(float(val), 4)
+                for feat, val in zip(features, sv)
+            }
+        except Exception as e:
+            logger.warning(f"Failed to compute SHAP values: {e}")
+
     return {
         "uhi_detected":       bool(label),
         "uhi_probability":    round(prob, 4),
         "model_confidence":   confidence,
         "feature_importance": importance,
+        "shap_values":        shap_values_dict,
+        "shap_base_value":    base_value,
     }
 
 

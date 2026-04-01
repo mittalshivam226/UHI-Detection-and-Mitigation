@@ -116,6 +116,12 @@ class MLAnalyzeResponse(BaseModel):
     feature_importance: Optional[Dict[str, float]] = Field(
         default=None, description="Classifier feature importance (lst_delta, ndvi, ndbi, evi, elevation, ntl)"
     )
+    shap_values: Optional[Dict[str, float]] = Field(
+        default=None, description="SHAP feature contributions for the specific prediction"
+    )
+    shap_base_value: Optional[float] = Field(
+        default=None, description="SHAP expected value (base value) for the classifier"
+    )
 
 
 class MLSimulateRequest(BaseModel):

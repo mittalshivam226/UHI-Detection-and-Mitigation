@@ -644,3 +644,70 @@ input[type=range]::-webkit-slider-thumb:hover  { transform: scale(1.15); }
 .cause-item:hover {
   background: var(--bg-lift, rgba(255,255,255,0.06));
 }
+
+/* =============================================
+   PRINT STYLES (PDF Generation from /reports)
+   ============================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .glass-panel, .glass-panel-heavy {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only-block {
+    display: block !important;
+  }
+
+  .print-container {
+    padding: 0 !important;
+    width: 100% !important;
+    background: white !important;
+  }
+  
+  .print-header {
+    border-bottom: 2px solid black !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Force Neon colors to printable dark equivalents */
+  .text-neon-cyan { color: #005f66 !important; }
+  .text-neon-magenta { color: #88007a !important; text-shadow: none !important; }
+  .text-neon-green { color: #008040 !important; }
+  .text-amber-400 { color: #8a6c00 !important; }
+  .text-white { color: #000000 !important; }
+  .text-white\/50, .text-white\/60 { color: #444444 !important; }
+
+  /* Ensure background boxes for metrics retain some structure */
+  .bg-white\/5, .bg-black\/40, .bg-white\/10 {
+    background: #f4f4f5 !important;
+    border: 1px solid #d4d4d8 !important;
+  }
+  
+  .border-white\/10 { border-color: #d4d4d8 !important; }
+  .border-l-2, .border-l-4 { border-left-style: solid !important; }
+}
