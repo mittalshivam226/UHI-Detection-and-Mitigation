@@ -10,6 +10,7 @@ export function initLandingTimeline(containerRef, sectionsRef) {
   const tl = gsap.timeline({
     scrollTrigger: {
       trigger: containerRef.current,
+      scroller: "#landing-scroller", // explicit scroller for the overflow-y-auto block
       start: "top top",
       end: "+=400%", // 4 screens of scrolling
       pin: true,
