@@ -109,11 +109,17 @@ function DatasetGlobe({ numDots, uhiRate }) {
   }, [numDots, uhiRate]);
 
   useEffect(() => {
-    if (globeEl.current) {
-      globeEl.current.controls().autoRotate = true;
-      globeEl.current.controls().autoRotateSpeed = 2.0;
-      globeEl.current.controls().enableZoom = false;
-    }
+    const initControls = () => {
+      if (globeEl.current && globeEl.current.controls && globeEl.current.controls()) {
+        globeEl.current.controls().autoRotate = true;
+        globeEl.current.controls().autoRotateSpeed = 2.0;
+        globeEl.current.controls().enableZoom = false;
+      } else {
+        // Retry if controls are not yet initialized by Three.js
+        setTimeout(initControls, 100);
+      }
+    };
+    initControls();
   }, []);
 
   return (

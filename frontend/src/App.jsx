@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const API = 'http://localhost:8002';
+const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
 const ML_API = `${API}/ml`;
 const LEGACY_API = `${API}/api`;
 
