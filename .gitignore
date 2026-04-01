@@ -9,8 +9,6 @@ backend/venv/
 *.pyc
 *.pyo
 
-# ML Model binaries (large, reproducible via train_model.py)
-backend/models/*.pkl
 backend/models/uhi_dataset*.csv
 backend/models/collect_err.txt
 backend/models/collect_log.txt

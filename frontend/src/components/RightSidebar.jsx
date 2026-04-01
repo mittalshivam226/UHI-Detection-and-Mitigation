@@ -284,8 +284,9 @@ function SimTrendChart({ currentTemp, simData }) {
   );
 }
 
-const ML_API = 'http://127.0.0.1:8002/ml';
-const LEGACY_API = 'http://127.0.0.1:8002/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+const ML_API = `${API_BASE}/ml`;
+const LEGACY_API = `${API_BASE}/api`;
 
 // ─── Right Analysis Panel ─────────────────────────────────────────────────────
 export default function RightSidebar() {

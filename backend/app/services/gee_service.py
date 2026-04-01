@@ -47,11 +47,25 @@ def initialize() -> bool:
     if _gee_ready:
         return True
 
-    if not os.path.exists(_GEE_KEY_PATH):
-        logger.error("GEE key file not found at %s", _GEE_KEY_PATH)
-        return False
-
     try:
+        if "GEE_KEY" in os.environ:
+            logger.info("Initializing Earth Engine via GEE_KEY environment variable.")
+            key_data = json.loads(os.environ["GEE_KEY"])
+            # Temporarily write the key to an ephemeral path for the ee library
+            temp_path = "/tmp/gee-key.json" if os.name != "nt" else "local_temp_key.json"
+            with open(temp_path, "w") as f:
+                json.dump(key_data, f)
+            credentials = ee.ServiceAccountCredentials(key_data["client_email"], temp_path)
+            ee.Initialize(credentials)
+            _gee_ready = True
+            logger.info("Earth Engine initialized successfully (ENV).")
+            return True
+
+        # Fallback to local file
+        if not os.path.exists(_GEE_KEY_PATH):
+            logger.error("GEE key file not found at %s and GEE_KEY env var not set.", _GEE_KEY_PATH)
+            return False
+
         with open(_GEE_KEY_PATH) as f:
             key_data = json.load(f)
         credentials = ee.ServiceAccountCredentials(key_data["client_email"], _GEE_KEY_PATH)

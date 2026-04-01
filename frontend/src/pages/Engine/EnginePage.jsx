@@ -49,7 +49,8 @@ function TelemetryPing() {
       const start = performance.now();
       let ok = false;
       try {
-        const r = await fetch('http://127.0.0.1:8002/ml/status');
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+        const r = await fetch(`${API_BASE}/ml/status`);
         if (r.ok) ok = true;
       } catch (e) {}
       const time = performance.now() - start;
@@ -302,7 +303,8 @@ export default function EnginePage() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8002/ml/status');
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+        const res = await fetch(`${API_BASE}/ml/status`);
         if (res.ok) {
           const data = await res.json();
           setGlobalStatus(data);

@@ -29,14 +29,15 @@ export default function DashboardPage() {
     const reqOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: reqBody };
     
     // Legacy API fetch
-    fetch(`http://127.0.0.1:8002/api/analyze-location`, reqOpts)
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+    fetch(`${API_BASE}/api/analyze-location`, reqOpts)
       .then(res => { if (!res.ok) throw new Error('API failed'); return res.json(); })
       .then(data => setAnalysis(data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
 
     // ML API fetch
-    fetch(`http://127.0.0.1:8002/ml/analyze-location`, reqOpts)
+    fetch(`${API_BASE}/ml/analyze-location`, reqOpts)
       .then(res => { if (!res.ok) throw new Error('ML API failed'); return res.json(); })
       .then(data => setMlData(data))
       .catch(err => console.error(err))
@@ -47,7 +48,7 @@ export default function DashboardPage() {
     if (!pos) return;
     setHotspotsLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8002/api/hotspots?lat=${pos.lat}&lon=${pos.lng}&radius_km=5`);
+      const res = await fetch(`${API_BASE}/api/hotspots?lat=${pos.lat}&lon=${pos.lng}&radius_km=5`);
       const data = await res.json();
       setHotspots(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -68,7 +69,8 @@ export default function DashboardPage() {
         const layerMap = { heat: 'lst', veg: 'ndvi', density: 'ndbi', ntl: 'ntl' };
         const backendLayer = layerMap[layerId] || layerId;
         
-        const res = await fetch(`http://127.0.0.1:8002/api/layer-tiles?layer=${backendLayer}&lat=${center.lat}&lon=${center.lng || center.lon || -73.99}`);
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+        const res = await fetch(`${API_BASE}/api/layer-tiles?layer=${backendLayer}&lat=${center.lat}&lon=${center.lng || center.lon || -73.99}`);
         const data = await res.json();
         
         setTileLayers(p => ({ ...p, [layerId]: data.tile_url }));
