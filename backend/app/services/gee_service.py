@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import os
 import logging
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_EXCEPTION
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 import ee

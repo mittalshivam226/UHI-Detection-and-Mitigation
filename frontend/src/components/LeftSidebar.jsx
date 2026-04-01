@@ -225,7 +225,7 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
             <div className="stat-mini-label">Coverage</div>
             <div className="stat-mini-value" style={{ color: 'var(--primary)', fontSize: 13, marginTop: -2 }}>
               <select 
-                style={{ background: 'transparent', color: 'inherit', border: 'none', outline: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'inherit', color: 'var(--primary)', textAlign: 'center' }}
+                style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'inherit', color: 'var(--primary)', textAlign: 'center' }}
                 onChange={(e) => {
                   const c = CITIES[e.target.value];
                   if (c && c.lat && onLocationSelect) onLocationSelect(c.lat, c.lng);
