@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Box, Html, Float } from '@react-three/drei';
 
-function MetricPillar({ position, height, color, label, value }) {
+function MetricPillar({ index, position, height, color, label, value }) {
   const meshRef = useRef();
 
   useFrame((state) => {
@@ -11,6 +11,9 @@ function MetricPillar({ position, height, color, label, value }) {
       meshRef.current.position.y = position[1] + height / 2 + Math.sin(state.clock.elapsedTime * 2 + position[0]) * 0.05;
     }
   });
+
+  // Stagger the labels so they don't perfectly overlap on the camera plane
+  const labelHeight = height + 0.6 + (index !== undefined && index % 2 === 0 ? 0.3 : -0.1);
 
   return (
     <group position={[position[0], 0, position[2]]}>
@@ -33,14 +36,14 @@ function MetricPillar({ position, height, color, label, value }) {
       </Box>
 
       {/* Floating Label */}
-      <Html position={[0, height + 0.6, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, labelHeight, 0]} center zIndexRange={[100, 0]}>
         <div className="text-white font-mono text-[9px] whitespace-nowrap drop-shadow-[0_0_2px_rgba(0,0,0,1)] bg-black/40 px-1 rounded">
           {label}
         </div>
       </Html>
       
       {/* Floating Value */}
-      <Html position={[0, height + 0.25, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, labelHeight - 0.35, 0]} center zIndexRange={[100, 0]}>
         <div className="font-display text-sm whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-bold" style={{ color: color }}>
           {(value * 100).toFixed(1)}%
         </div>
@@ -113,6 +116,7 @@ export function Metrics3D({ features }) {
           return (
             <MetricPillar
               key={key}
+              index={index}
               position={[px, 0, pz]}
               height={height}
               color={COLORS[key] || '#00f2ff'}

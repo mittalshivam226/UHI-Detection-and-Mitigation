@@ -162,11 +162,11 @@ function DatasetGlobe({ numDots, uhiRate }) {
   }, []);
 
   return (
-    <div className="absolute inset-0 cursor-crosshair mix-blend-screen" style={{ transform: 'scale(1.2) translateY(20px)' }}>
+    <div className="absolute inset-0 flex items-center justify-center cursor-crosshair mix-blend-screen overflow-visible pt-10">
       <Globe
         ref={globeEl}
-        width={500}
-        height={350}
+        width={400}
+        height={400}
         backgroundColor="rgba(0,0,0,0)"
         globeImageUrl="https://unpkg.com/three-globe/example/img/earth-dark.jpg"
         showAtmosphere={true}
