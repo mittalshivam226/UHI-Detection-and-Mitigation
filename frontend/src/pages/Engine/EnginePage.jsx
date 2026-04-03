@@ -166,7 +166,7 @@ function DatasetGlobe({ numDots, uhiRate }) {
       <Globe
         ref={globeEl}
         backgroundColor="rgba(0,0,0,0)"
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+        globeImageUrl="https://unpkg.com/three-globe/example/img/earth-dark.jpg"
         showAtmosphere={true}
         atmosphereColor="#FF00E5"
         atmosphereAltitude={0.15}

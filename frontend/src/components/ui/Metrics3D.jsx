@@ -7,7 +7,9 @@ function MetricPillar({ position, height, color, label, value }) {
 
   useFrame((state) => {
     // Gentle hovering breath effect on the pillars
-    meshRef.current.position.y = position[1] + height / 2 + Math.sin(state.clock.elapsedTime * 2 + position[0]) * 0.05;
+    if (meshRef.current) {
+      meshRef.current.position.y = position[1] + height / 2 + Math.sin(state.clock.elapsedTime * 2 + position[0]) * 0.05;
+    }
   });
 
   return (
