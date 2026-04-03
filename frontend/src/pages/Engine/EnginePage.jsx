@@ -332,23 +332,25 @@ function ShapWaterfall({ shapValues, baseValue }) {
       axisPointer: { type: 'shadow' },
       backgroundColor: 'rgba(0,0,0,0.8)',
       borderColor: 'rgba(0, 242, 255, 0.3)',
-      textStyle: { color: '#fff' },
+      textStyle: { color: '#fff', fontFamily: 'JetBrains Mono', fontSize: 10 },
       formatter: function (params) {
-        let tar = params[1].value !== 0 ? params[1] : params[2].value !== 0 ? params[2] : params[1];
-        const prefix = tar.seriesName === 'Negative' ? '-' : '+';
-        return `<span style="font-family: 'JetBrains Mono'; font-size: 10px">${tar.name}</span><br/><strong style="color:${tar.color}">${prefix}${tar.value}</strong> contribution`;
+        let tar = params[1] && params[1].value > 0 ? params[1] : params[2];
+        if (!tar) tar = params[0];
+        return tar && tar.name + '<br/>' + tar.seriesName + ' : ' + tar.value.toFixed(3);
       }
     },
-    grid: { left: 50, right: 20, bottom: 45, top: 40 },
-    xAxis: { 
-      type: 'category', data: categories, 
-      axisLabel: { interval: 0, rotate: 30, color: 'rgba(255,255,255,0.7)', fontSize: 9, fontFamily: 'JetBrains Mono' },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      splitLine: { show: false } 
+    grid: { left: '3%', right: '4%', bottom: '5%', top: '25%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 9, rotate: 30 }
     },
     yAxis: { 
       type: 'value', 
       scale: true,
+      min: function(value) { return (value.min - 0.5).toFixed(1); },
+      max: function(value) { return (value.max + 0.5).toFixed(1); },
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, 
       axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 9 } 
     },
@@ -356,23 +358,37 @@ function ShapWaterfall({ shapValues, baseValue }) {
       {
         name: 'Placeholder', type: 'bar', stack: 'Total',
         itemStyle: { borderColor: 'transparent', color: 'transparent' },
-        emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
         data: baseData
       },
       {
-        name: 'Positive', type: 'bar', stack: 'Total',
+        name: 'Increased UHI Risk (+)', type: 'bar', stack: 'Total',
         itemStyle: { color: '#FF3B3B', borderRadius: [2, 2, 0, 0], shadowColor: 'rgba(255,59,59,0.5)', shadowBlur: 10 },
         data: posData
       },
       {
-        name: 'Negative', type: 'bar', stack: 'Total',
+        name: 'Decreased UHI Risk (-)', type: 'bar', stack: 'Total',
         itemStyle: { color: '#00f2ff', borderRadius: [2, 2, 0, 0], shadowColor: 'rgba(0,242,255,0.5)', shadowBlur: 10 },
         data: negData
       }
     ]
   };
 
-  return <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return (
+    <div className="relative w-full h-full pb-4">
+      {/* SHAP Meaning HUD */}
+      <div className="absolute top-0 right-4 z-10 hidden md:flex gap-4 pointer-events-none mt-2 opacity-70 border border-white/10 bg-black/40 px-3 py-1.5 rounded-full">
+         <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
+            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE</span>
+         </div>
+         <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] shadow-[0_0_5px_#00f2ff]" />
+            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE</span>
+         </div>
+      </div>
+      <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
+    </div>
+  );
 }
 
 // ─── MAIN ENGINE PAGE ────────────────────────────────────────────────────────
