@@ -515,7 +515,7 @@ export default function EnginePage() {
              </div>
              
              {/* Render Globe inside boundary */}
-             <div className="absolute inset-0 top-[100px] flex items-center justify-center pointer-events-auto">
+             <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto">
                <DiagnosticBoundary>
                  <DatasetGlobe numDots={globalStatus?.feature_importance?.dataset_rows} uhiRate={globalStatus?.feature_importance?.uhi_positive_rate}/>
                </DiagnosticBoundary>
