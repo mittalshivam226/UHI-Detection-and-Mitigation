@@ -68,8 +68,9 @@ export function Metrics3D({ features }) {
   });
 
   // Calculate scaling factor to keep tallest pillar at a max height
-  const maxVal = Math.max(...Object.values(features || { dummy: 1 }));
-  const heightScale = 4.0 / (maxVal || 1);
+  const vals = Object.values(features || {});
+  const maxVal = vals.length > 0 ? Math.max(...vals) : 1;
+  const heightScale = 4.0 / (maxVal === 0 ? 1 : maxVal);
 
   // Map backend feature keys to UI labels and colors
   const LABELS = {
@@ -106,9 +107,11 @@ export function Metrics3D({ features }) {
         <pointLight position={[0, 2, 0]} intensity={2} color="#a78bfa" distance={8} />
 
         {keys.map((key, index) => {
-          const value = features[key];
-          const height = Math.max(0.1, value * heightScale);
-          const angle = (index / count) * Math.PI * 2;
+          const rawValue = features[key];
+          const value = typeof rawValue === 'number' && !isNaN(rawValue) ? rawValue : 0;
+          const calculatedHeight = value * heightScale;
+          const height = Math.max(0.1, isNaN(calculatedHeight) || !isFinite(calculatedHeight) ? 0.1 : calculatedHeight);
+          const angle = count > 0 ? (index / count) * Math.PI * 2 : 0;
           
           // Position in a circle
           const px = Math.cos(angle) * radius;
