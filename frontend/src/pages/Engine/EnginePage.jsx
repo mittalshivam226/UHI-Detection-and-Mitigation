@@ -165,15 +165,15 @@ function DatasetGlobe({ numDots, uhiRate }) {
     <div className="absolute inset-0 cursor-crosshair mix-blend-screen" style={{ transform: 'scale(1.2) translateY(20px)' }}>
       <Globe
         ref={globeEl}
-        width={400}
-        height={300}
+        width={500}
+        height={350}
         backgroundColor="rgba(0,0,0,0)"
         globeImageUrl="https://unpkg.com/three-globe/example/img/earth-dark.jpg"
         showAtmosphere={true}
         atmosphereColor="#FF00E5"
         atmosphereAltitude={0.15}
         pointsData={gData}
-        pointAltitude="size"
+        pointAltitude={0.01}
         pointColor="color"
         pointRadius={0.4}
         pointsMerge={true}
@@ -314,6 +314,7 @@ function ShapWaterfall({ shapValues, baseValue }) {
     },
     yAxis: { 
       type: 'value', 
+      scale: true,
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, 
       axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 9 } 
     },

@@ -76,7 +76,7 @@ export function Metrics3D({ features }) {
 
   const keys = Object.keys(features || {});
   const count = keys.length;
-  const radius = count > 3 ? 2.5 : 1.5;
+  const radius = count > 3 ? 3.5 : 2.0;
 
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
@@ -102,7 +102,8 @@ export function Metrics3D({ features }) {
           const rawValue = features[key];
           const value = typeof rawValue === 'number' && !isNaN(rawValue) ? rawValue : 0;
           const calculatedHeight = value * heightScale;
-          const height = Math.max(0.1, isNaN(calculatedHeight) || !isFinite(calculatedHeight) ? 0.1 : calculatedHeight);
+          // Ensure a minimum visual height of 0.4 to prevent label overlap
+          const height = Math.max(0.4, isNaN(calculatedHeight) || !isFinite(calculatedHeight) ? 0.4 : calculatedHeight);
           const angle = count > 0 ? (index / count) * Math.PI * 2 : 0;
           
           // Position in a circle
