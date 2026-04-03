@@ -249,10 +249,44 @@ function VarianceHeartbeat({ f1Mean, f1Std }) {
 function ShapWaterfall({ shapValues, baseValue }) {
   if (!shapValues || Object.keys(shapValues).length === 0) {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30 border-2 border-dashed border-white/5 rounded-xl m-4">
-        <ScanFace size={32} className="mb-3 animate-pulse text-neon-cyan/50" />
-        <span className="font-mono text-[10px] tracking-widest text-white/50 bg-black/40 px-3 py-1 rounded">AWAITING TACTICAL MAP VECTOR</span>
-        <span className="font-display text-sm mt-3 font-medium text-white/40">Select a city node in the Tactical Map to extract localized SHAP explanations</span>
+      <div className="absolute inset-0 m-4 rounded-xl overflow-hidden bg-black/40 border border-white/5 flex flex-col items-center justify-center">
+        {/* Animated Scanning Grid Background */}
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: 'linear-gradient(rgba(0, 242, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.2) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+          backgroundPosition: 'center center'
+        }} />
+        <motion.div 
+          animate={{ y: ["-100%", "100%"] }}
+          transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+          className="absolute inset-0 w-full h-[20%] bg-gradient-to-b from-transparent via-[#00f2ff]/20 to-transparent pointer-events-none"
+        />
+
+        {/* Lock-on Reticle */}
+        <div className="relative z-10 flex flex-col items-center justify-center border border-[#00f2ff]/30 p-8 rounded-full bg-[#00f2ff]/5">
+          <motion.div 
+             animate={{ rotate: 360 }} 
+             transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+             className="absolute w-32 h-32 border border-dashed border-[#00f2ff]/50 rounded-full"
+          />
+          <motion.div 
+             animate={{ rotate: -360, scale: [0.9, 1.1, 0.9] }} 
+             transition={{ rotate: { repeat: Infinity, duration: 12, ease: "linear" }, scale: { repeat: Infinity, duration: 3, ease: "easeInOut" } }}
+             className="absolute w-24 h-24 border border-[#FF00E5]/30 rounded-full"
+          />
+          <ScanFace size={32} className="text-[#00f2ff] drop-shadow-[0_0_8px_#00f2ff] animate-pulse" />
+        </div>
+
+        {/* Status Text HUD */}
+        <div className="relative z-10 mt-8 flex flex-col items-center">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <span className="font-mono text-[10px] tracking-widest text-[#00f2ff] font-bold">AWAITING TACTICAL LOCK</span>
+          </div>
+          <span className="font-display text-xs text-white/50 text-center max-w-[250px]">
+            Calibrating SHAP explanation engine. Select a global node to map vector feature logic.
+          </span>
+        </div>
       </div>
     );
   }
