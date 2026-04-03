@@ -313,28 +313,28 @@ function ShapWaterfall({ shapValues, baseValue }) {
   flowNodes.push({ name: 'Final Output', val: currentTotal, type: 'final' });
 
   return (
-    <div className="relative w-full h-full pb-4 flex flex-col">
+    <div className="relative w-full h-full pb-6 pt-2 flex flex-col">
       {/* SHAP Meaning HUD */}
-      <div className="absolute -top-10 right-4 z-10 flex gap-4 pointer-events-none opacity-80 border border-white/10 bg-black/60 px-3 py-1.5 rounded-lg shadow-lg">
+      <div className="absolute top-2 left-6 z-10 flex gap-4 pointer-events-none opacity-80 border border-white/10 bg-black/60 px-3 py-1.5 rounded-lg shadow-lg">
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE (+ ΔT)</span>
          </div>
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] shadow-[0_0_5px_#00f2ff]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE (- ΔT)</span>
          </div>
       </div>
 
       {/* 4D Animated Flow Diagram */}
-      <div className="flex-1 w-full mx-auto mt-2 flex items-center justify-start gap-8 relative overflow-x-auto overflow-y-hidden custom-scrollbar px-6 shadow-inner">
+      <div className="flex-1 w-full mx-auto mt-10 flex items-center justify-start gap-12 relative overflow-x-auto overflow-y-hidden px-8 py-16 shadow-inner [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
         {/* The Animated Energy Backbone */}
-        <div className="absolute top-1/2 left-0 w-[2000px] h-[2px] bg-white/10 -translate-y-1/2 z-0 min-w-max">
+        <div className="absolute top-1/2 left-0 w-[3000px] h-[2px] bg-white/10 -translate-y-1/2 z-0 min-w-max pointer-events-none">
           <motion.div 
             animate={{ x: ["-10%", "100%"] }}
-            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-            className="w-[200px] h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 shadow-[0_0_8px_white]"
+            transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
+            className="w-[300px] h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 shadow-[0_0_8px_white]"
           />
         </div>
 
@@ -562,7 +562,7 @@ export default function EnginePage() {
              <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto">
                
                {/* Globe Legend */}
-               <div className="absolute top-0 right-4 z-10 flex flex-col gap-1 pointer-events-none mt-2 opacity-70 border border-white/10 bg-black/40 px-3 py-2 rounded">
+               <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-1 pointer-events-none opacity-70 border border-white/10 bg-black/60 px-3 py-2 rounded shadow-lg backdrop-blur-sm">
                  <div className="text-[10px] text-white/50 font-display mb-1 border-b border-white/10 pb-1">NODE CLASSIFICATION</div>
                  <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
