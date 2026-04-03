@@ -300,93 +300,85 @@ function ShapWaterfall({ shapValues, baseValue }) {
     .map(k => ({ name: PRETTY_LABELS[k] || k.toUpperCase(), val: shapValues[k] }))
     .sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
   
-  // Create waterfall structure
-  let current = baseValue || 0;
-  const categories = ['Base Log-Odds', ...entries.map(e => e.name), 'Model Output'];
-  const baseData = [0];
-  const posData = [current];
-  const negData = [0];
+  let currentTotal = baseValue || 0;
+  const flowNodes = [
+    { name: 'Base Log-Odds', val: currentTotal, type: 'base' }
+  ];
 
   entries.forEach(e => {
-    if (e.val > 0) {
-      baseData.push(current);
-      posData.push(e.val);
-      negData.push(0);
-      current += e.val;
-    } else {
-      current += e.val;
-      baseData.push(current);
-      posData.push(0);
-      negData.push(Math.abs(e.val));
-    }
+    flowNodes.push({ name: e.name, val: e.val, type: e.val > 0 ? 'pos' : 'neg' });
+    currentTotal += e.val;
   });
 
-  baseData.push(0);
-  posData.push(current);
-  negData.push(0);
-
-  const option = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      borderColor: 'rgba(0, 242, 255, 0.3)',
-      textStyle: { color: '#fff', fontFamily: 'JetBrains Mono', fontSize: 10 },
-      formatter: function (params) {
-        let tar = params[1] && params[1].value > 0 ? params[1] : params[2];
-        if (!tar) tar = params[0];
-        return tar && tar.name + '<br/>' + tar.seriesName + ' : ' + tar.value.toFixed(3);
-      }
-    },
-    grid: { left: '3%', right: '4%', bottom: '5%', top: '25%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: categories,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
-      axisLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 9, rotate: 30 }
-    },
-    yAxis: { 
-      type: 'value', 
-      scale: true,
-      min: function(value) { return (value.min - 0.5).toFixed(1); },
-      max: function(value) { return (value.max + 0.5).toFixed(1); },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, 
-      axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 9 } 
-    },
-    series: [
-      {
-        name: 'Placeholder', type: 'bar', stack: 'Total',
-        itemStyle: { borderColor: 'transparent', color: 'transparent' },
-        data: baseData
-      },
-      {
-        name: 'Increased UHI Risk (+)', type: 'bar', stack: 'Total',
-        itemStyle: { color: '#FF3B3B', borderRadius: [2, 2, 0, 0], shadowColor: 'rgba(255,59,59,0.5)', shadowBlur: 10 },
-        data: posData
-      },
-      {
-        name: 'Decreased UHI Risk (-)', type: 'bar', stack: 'Total',
-        itemStyle: { color: '#00f2ff', borderRadius: [2, 2, 0, 0], shadowColor: 'rgba(0,242,255,0.5)', shadowBlur: 10 },
-        data: negData
-      }
-    ]
-  };
+  flowNodes.push({ name: 'Final Output', val: currentTotal, type: 'final' });
 
   return (
-    <div className="relative w-full h-full pb-4">
+    <div className="relative w-full h-full pb-4 flex flex-col">
       {/* SHAP Meaning HUD */}
       <div className="absolute top-0 right-4 z-10 hidden md:flex gap-4 pointer-events-none mt-2 opacity-70 border border-white/10 bg-black/40 px-3 py-1.5 rounded-full">
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE (+ ΔT)</span>
          </div>
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] shadow-[0_0_5px_#00f2ff]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE (- ΔT)</span>
          </div>
       </div>
-      <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
+
+      {/* 4D Animated Flow Diagram */}
+      <div className="flex-1 w-[90%] mx-auto mt-6 flex items-center justify-between relative overflow-x-auto no-scrollbar px-4">
+        
+        {/* The Animated Energy Backbone */}
+        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/10 -translate-y-1/2 z-0">
+          <motion.div 
+            animate={{ x: ["-10%", "100%"] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+            className="w-[100px] h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 shadow-[0_0_8px_white]"
+          />
+        </div>
+
+        {flowNodes.map((node, index) => {
+          const isBase = node.type === 'base';
+          const isFinal = node.type === 'final';
+          const isPos = node.type === 'pos';
+          
+          let glowColor = 'shadow-[0_0_10px_rgba(255,255,255,0.1)]';
+          let borderColor = 'border-white/20';
+          let textColor = 'text-white';
+          let yOffset = 0;
+
+          if (!isBase && !isFinal) {
+             glowColor = isPos ? 'shadow-[0_0_15px_rgba(255,59,59,0.3)]' : 'shadow-[0_0_15px_rgba(0,242,255,0.3)]';
+             borderColor = isPos ? 'border-[#FF3B3B]/50' : 'border-[#00f2ff]/50';
+             textColor = isPos ? 'text-[#FF3B3B]' : 'text-[#00f2ff]';
+             yOffset = isPos ? -20 : 20; // Stagger branches physically upwards and downwards for 4D feel
+          } else {
+             borderColor = 'border-white/50 border-dashed';
+          }
+
+          return (
+            <motion.div 
+              key={`${node.name}-${index}`}
+              initial={{ opacity: 0, scale: 0.8, y: yOffset }}
+              animate={{ opacity: 1, scale: 1, y: yOffset }}
+              transition={{ delay: index * 0.1, type: "spring" }}
+              whileHover={{ scale: 1.1, zIndex: 50 }}
+              className={`relative z-10 flex flex-col items-center justify-center p-3 rounded-lg min-w-[90px] backdrop-blur-md bg-black/60 border ${borderColor} ${glowColor}`}
+            >
+              <div className="font-mono text-[9px] tracking-widest text-white/50 mb-1 text-center truncate w-full">
+                {node.name}
+              </div>
+              <div className={`font-display text-sm font-bold ${textColor}`}>
+                {isBase || isFinal ? node.val.toFixed(3) : (node.val > 0 ? '+' : '') + node.val.toFixed(3)}
+              </div>
+              
+              {/* Pulse node connector */}
+              <div className="absolute top-1/2 -left-[20px] w-[20px] h-[1px] bg-white/20" />
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -566,6 +558,20 @@ export default function EnginePage() {
              
              {/* Render Globe inside boundary */}
              <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto">
+               
+               {/* Globe Legend */}
+               <div className="absolute top-0 right-4 z-10 flex flex-col gap-1 pointer-events-none mt-2 opacity-70 border border-white/10 bg-black/40 px-3 py-2 rounded">
+                 <div className="text-[10px] text-white/50 font-display mb-1 border-b border-white/10 pb-1">NODE CLASSIFICATION</div>
+                 <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
+                    <span className="text-[9px] font-mono tracking-widest text-white/70">UHI POSITIVE (HOT)</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] shadow-[0_0_5px_#00f2ff]" />
+                    <span className="text-[9px] font-mono tracking-widest text-white/70">UHI NEGATIVE (COOL)</span>
+                 </div>
+               </div>
+
                <DiagnosticBoundary>
                  <DatasetGlobe numDots={globalStatus?.feature_importance?.dataset_rows} uhiRate={globalStatus?.feature_importance?.uhi_positive_rate}/>
                </DiagnosticBoundary>
