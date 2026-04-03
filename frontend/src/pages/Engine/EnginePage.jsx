@@ -315,26 +315,26 @@ function ShapWaterfall({ shapValues, baseValue }) {
   return (
     <div className="relative w-full h-full pb-4 flex flex-col">
       {/* SHAP Meaning HUD */}
-      <div className="absolute top-0 right-4 z-10 hidden md:flex gap-4 pointer-events-none mt-2 opacity-70 border border-white/10 bg-black/40 px-3 py-1.5 rounded-full">
+      <div className="absolute -top-10 right-4 z-10 flex gap-4 pointer-events-none opacity-80 border border-white/10 bg-black/60 px-3 py-1.5 rounded-lg shadow-lg">
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE (+ ΔT)</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#FF3B3B]">RISK INCREASE</span>
          </div>
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] shadow-[0_0_5px_#00f2ff]" />
-            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE (- ΔT)</span>
+            <span className="text-[9px] font-mono tracking-widest text-[#00f2ff]">RISK DECREASE</span>
          </div>
       </div>
 
       {/* 4D Animated Flow Diagram */}
-      <div className="flex-1 w-[90%] mx-auto mt-6 flex items-center justify-between relative overflow-x-auto no-scrollbar px-4">
+      <div className="flex-1 w-full mx-auto mt-2 flex items-center justify-start gap-8 relative overflow-x-auto overflow-y-hidden custom-scrollbar px-6 shadow-inner">
         
         {/* The Animated Energy Backbone */}
-        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/10 -translate-y-1/2 z-0">
+        <div className="absolute top-1/2 left-0 w-[2000px] h-[2px] bg-white/10 -translate-y-1/2 z-0 min-w-max">
           <motion.div 
             animate={{ x: ["-10%", "100%"] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-            className="w-[100px] h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 shadow-[0_0_8px_white]"
+            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+            className="w-[200px] h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 shadow-[0_0_8px_white]"
           />
         </div>
 
@@ -364,9 +364,9 @@ function ShapWaterfall({ shapValues, baseValue }) {
               animate={{ opacity: 1, scale: 1, y: yOffset }}
               transition={{ delay: index * 0.1, type: "spring" }}
               whileHover={{ scale: 1.1, zIndex: 50 }}
-              className={`relative z-10 flex flex-col items-center justify-center p-3 rounded-lg min-w-[90px] backdrop-blur-md bg-black/60 border ${borderColor} ${glowColor}`}
+              className={`relative z-10 shrink-0 flex flex-col items-center justify-center p-3 rounded-lg min-w-[110px] backdrop-blur-md bg-black/60 border ${borderColor} ${glowColor}`}
             >
-              <div className="font-mono text-[9px] tracking-widest text-white/50 mb-1 text-center truncate w-full">
+              <div className="font-mono text-[10px] tracking-widest text-white/70 mb-1 text-center w-full">
                 {node.name}
               </div>
               <div className={`font-display text-sm font-bold ${textColor}`}>
@@ -374,7 +374,9 @@ function ShapWaterfall({ shapValues, baseValue }) {
               </div>
               
               {/* Pulse node connector */}
-              <div className="absolute top-1/2 -left-[20px] w-[20px] h-[1px] bg-white/20" />
+              {index > 0 && (
+                <div className="absolute top-1/2 -left-[32px] w-[32px] h-[1px] bg-white/20" />
+              )}
             </motion.div>
           );
         })}
