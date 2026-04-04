@@ -498,7 +498,7 @@ export default function EnginePage() {
         </div>
 
         {/* ROW 1: 3D XGBoost Landscape & SHAP Matrix */}
-        <div className="flex flex-col lg:flex-row gap-6 w-full lg:h-[420px]">
+        <div className="flex flex-col lg:flex-row gap-6 w-full lg:min-h-[500px]">
           
           {/* LEFT: 3D XGBoost Landscape */}
           <GlassPanel className="w-full lg:w-5/12 rounded-xl p-0 overflow-hidden relative border border-neon-cyan/20 flex flex-col">
@@ -508,7 +508,7 @@ export default function EnginePage() {
               </h3>
               <p className="font-mono text-[10px] text-white/50 tracking-widest mt-1">XGBOOST ALGORITHM DIAGNOSTIC</p>
             </div>
-            <div className="w-full h-[400px] lg:h-full bg-black/80">
+            <div className="w-full h-[400px] lg:flex-1 bg-black/80">
               <DiagnosticBoundary>
                 <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
                   <React.Suspense fallback={null}>
@@ -521,7 +521,7 @@ export default function EnginePage() {
           </GlassPanel>
 
           {/* RIGHT: Live SHAP Explanation Matrix */}
-          <GlassPanel className="w-full lg:w-7/12 rounded-xl p-0 relative border border-[#FF3B3B]/20 bg-gradient-to-tr from-[#FF3B3B]/10 to-transparent flex flex-col overflow-hidden">
+          <GlassPanel className="w-full lg:w-7/12 rounded-xl p-0 relative border border-[#FF3B3B]/20 bg-gradient-to-tr from-[#FF3B3B]/10 to-transparent flex flex-col overflow-hidden min-h-[400px]">
              <div className="absolute top-5 left-5 z-10 w-full pr-10 flex justify-between pointer-events-none">
                 <div>
                   <h3 className="font-display font-bold text-xl text-white flex items-center gap-2">
@@ -539,7 +539,7 @@ export default function EnginePage() {
         </div>
 
         {/* ROW 2: Architecture Specs & Validation Trajectories & Dataset Anchors */}
-        <div className="flex flex-col lg:flex-row gap-6 w-full lg:h-[350px]">
+        <div className="flex flex-col lg:flex-row gap-6 w-full lg:min-h-[450px]">
           
           {/* LEFT: Dataset Anchors (Globe Hologram) */}
           <GlassPanel className="w-full lg:w-4/12 rounded-xl p-6 relative flex flex-col border border-white/5 overflow-hidden">
@@ -562,7 +562,7 @@ export default function EnginePage() {
              <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto">
                
                {/* Globe Legend */}
-               <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-1 pointer-events-none opacity-70 border border-white/10 bg-black/60 px-3 py-2 rounded shadow-lg backdrop-blur-sm">
+               <div className="absolute bottom-6 left-6 z-10 flex flex-col gap-1 pointer-events-none opacity-70 border border-white/10 bg-black/60 px-3 py-2 rounded shadow-lg backdrop-blur-sm">
                  <div className="text-[10px] text-white/50 font-display mb-1 border-b border-white/10 pb-1">NODE CLASSIFICATION</div>
                  <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
