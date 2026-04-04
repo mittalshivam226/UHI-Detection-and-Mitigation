@@ -9,7 +9,7 @@ export default function NavigationHUD() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 h-[70px] z-50 flex items-center justify-between px-8 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+      <nav className="fixed top-0 left-0 right-0 h-[70px] z-50 flex items-center justify-between px-8 bg-black/80 backdrop-blur-md border-b border-neon-cyan/20 pointer-events-auto">
         <div className="flex items-center gap-3 pointer-events-auto">
           <Flame className="w-6 h-6 text-neon-cyan" />
           <span className="font-display font-bold text-xl tracking-widest text-white drop-shadow-[0_0_10px_rgba(0,242,255,0.8)]">

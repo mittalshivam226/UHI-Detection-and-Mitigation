@@ -498,7 +498,7 @@ export default function EnginePage() {
         </div>
 
         {/* ROW 1: 3D XGBoost Landscape & SHAP Matrix */}
-        <div className="flex flex-col lg:flex-row gap-6 w-full lg:min-h-[500px]">
+        <div className="flex flex-col lg:flex-row gap-6 w-full lg:h-[420px]">
           
           {/* LEFT: 3D XGBoost Landscape */}
           <GlassPanel className="w-full lg:w-5/12 rounded-xl p-0 overflow-hidden relative border border-neon-cyan/20 flex flex-col">
@@ -508,7 +508,7 @@ export default function EnginePage() {
               </h3>
               <p className="font-mono text-[10px] text-white/50 tracking-widest mt-1">XGBOOST ALGORITHM DIAGNOSTIC</p>
             </div>
-            <div className="w-full h-[400px] lg:flex-1 bg-black/80">
+            <div className="w-full h-full bg-black/80">
               <DiagnosticBoundary>
                 <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
                   <React.Suspense fallback={null}>
@@ -521,8 +521,8 @@ export default function EnginePage() {
           </GlassPanel>
 
           {/* RIGHT: Live SHAP Explanation Matrix */}
-          <GlassPanel className="w-full lg:w-7/12 rounded-xl p-0 relative border border-[#FF3B3B]/20 bg-gradient-to-tr from-[#FF3B3B]/10 to-transparent flex flex-col overflow-hidden min-h-[400px]">
-             <div className="absolute top-5 left-5 z-10 w-full pr-10 flex justify-between pointer-events-none">
+          <GlassPanel className="w-full lg:w-7/12 rounded-xl p-0 relative border border-[#FF3B3B]/20 bg-gradient-to-tr from-[#FF3B3B]/10 to-transparent flex flex-col overflow-visible">
+             <div className="absolute top-5 left-5 z-20 w-full pr-10 flex justify-between pointer-events-none">
                 <div>
                   <h3 className="font-display font-bold text-xl text-white flex items-center gap-2">
                     <ActivityIcon size={18} className="text-[#FF3B3B]" /> Live SHAP Explanation Simulator
@@ -532,18 +532,18 @@ export default function EnginePage() {
                 <div className="bg-[#FF3B3B]/20 text-[#FF3B3B] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[#FF3B3B]/30 self-start shadow-[0_0_10px_#FF3B3B]">XGBOOST EXPLAINER</div>
              </div>
              
-             <div className="w-full flex-1 pt-16">
+             <div className="w-full h-full pt-20 relative">
                <ShapWaterfall shapValues={mlData?.shap_values} baseValue={mlData?.shap_base_value} />
              </div>
           </GlassPanel>
         </div>
 
         {/* ROW 2: Architecture Specs & Validation Trajectories & Dataset Anchors */}
-        <div className="flex flex-col lg:flex-row gap-6 w-full lg:min-h-[450px]">
+        <div className="flex flex-col lg:flex-row gap-6 w-full lg:h-[350px]">
           
           {/* LEFT: Dataset Anchors (Globe Hologram) */}
-          <GlassPanel className="w-full lg:w-4/12 rounded-xl p-6 relative flex flex-col border border-white/5 overflow-hidden">
-             <div className="relative z-10 pointer-events-none mb-4 w-full flex justify-between items-start">
+          <GlassPanel className="w-full lg:w-4/12 rounded-xl p-6 relative flex flex-col border border-white/5 overflow-visible">
+             <div className="relative z-20 pointer-events-none mb-4 w-full flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Globe2 size={16} className="text-[#FF00E5]" />
@@ -559,10 +559,10 @@ export default function EnginePage() {
              </div>
              
              {/* Render Globe inside boundary */}
-             <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto">
+             <div className="relative flex-1 w-full flex items-center justify-center pointer-events-auto mt-4">
                
                {/* Globe Legend */}
-               <div className="absolute bottom-6 left-6 z-10 flex flex-col gap-1 pointer-events-none opacity-70 border border-white/10 bg-black/60 px-3 py-2 rounded shadow-lg backdrop-blur-sm">
+               <div className="absolute bottom-2 left-2 z-10 flex flex-col gap-1 pointer-events-none opacity-80 border border-white/10 bg-black/80 px-3 py-2 rounded shadow-lg backdrop-blur-sm">
                  <div className="text-[10px] text-white/50 font-display mb-1 border-b border-white/10 pb-1">NODE CLASSIFICATION</div>
                  <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] shadow-[0_0_5px_#FF3B3B]" />
@@ -584,8 +584,8 @@ export default function EnginePage() {
           <GlassPanel className="w-full lg:w-3/12 rounded-xl p-6 relative flex flex-col border border-white/5 bg-gradient-to-br from-black/80 to-transparent">
             <h3 className="font-display font-medium text-md text-white">Multivariate Vector Radar</h3>
             <p className="font-mono text-[8px] text-white/50 tracking-widest mb-2 border-b border-white/10 pb-2">CROSS-SECTIONAL METRIC INFLUENCE PROJECTION</p>
-            <div className="flex-1 -mx-4 h-[200px]">
-              <ReactECharts option={radarOption} style={{ height: '100%', width: '100%' }} />
+            <div className="flex-1 -mx-4 h-full relative">
+              <ReactECharts option={radarOption} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
             </div>
           </GlassPanel>
 
