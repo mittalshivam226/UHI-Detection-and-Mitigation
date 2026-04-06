@@ -196,7 +196,7 @@ function VarianceHeartbeat({ f1Mean, f1Std }) {
   useEffect(() => {
     let t = 0;
     const it = setInterval(() => {
-      t += 0.5;
+      t += 2.0; // Faster time step to compensate for slower interval
       const base = f1Mean || 0.89;
       const variance = f1Std || 0.0153;
       const drift = Math.sin(t * 0.5) * variance * 2;
@@ -208,7 +208,7 @@ function VarianceHeartbeat({ f1Mean, f1Std }) {
         const next = [...p.slice(Math.max(0, p.length - 49)), [t, val, lower, upper]];
         return next;
       });
-    }, 150);
+    }, 800);
     return () => clearInterval(it);
   }, [f1Mean, f1Std]);
 

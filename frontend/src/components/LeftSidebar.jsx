@@ -46,6 +46,31 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
   const { mapTheme, layerOpacity, setLayerOpacity } = useUHIContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+
+  React.useEffect(() => {
+    let debounceTimer;
+    if (searchQuery.trim().length > 2 && showSuggestions) {
+      setIsTyping(true);
+      debounceTimer = setTimeout(async () => {
+        try {
+          const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`);
+          const data = await resp.json();
+          setSuggestions(data || []);
+        } catch (e) {
+          console.error("Autocomplete failed:", e);
+        } finally {
+          setIsTyping(false);
+        }
+      }, 800);
+    } else {
+      setIsTyping(false);
+      if (!showSuggestions) setSuggestions([]);
+    }
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, showSuggestions]);
 
   const avgTemp = hotspots.length
     ? (hotspots.reduce((s, h) => s + h.temp, 0) / hotspots.length).toFixed(1)
@@ -65,12 +90,13 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setSearching(true);
+    setShowSuggestions(false);
     try {
       const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       const data = await resp.json();
       if (data && data.length > 0) {
         if (onLocationSelect) onLocationSelect(parseFloat(data[0].lat), parseFloat(data[0].lon));
-        setSearchQuery('');
+        setSearchQuery(data[0].display_name);
       } else {
         alert("Location not found.");
       }
@@ -90,17 +116,42 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
     >
       {/* ─── Global Search ─── */}
       <div className="sidebar-section pb-2 pt-5">
-        <form onSubmit={handleSearch} className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Global Location"
-            className="w-full bg-black/40 border border-white/10 rounded-lg text-white text-xs font-mono px-9 py-2.5 outline-none focus:border-neon-cyan/50 focus:shadow-[0_0_15px_rgba(0,242,255,0.2)] transition-all"
-          />
-          <Search size={14} color="var(--primary)" className="absolute left-3 top-3 opacity-70" />
-          {searching && <span className="absolute right-3 top-3.5 text-[9px] text-neon-cyan tracking-widest animate-pulse">SCANNING</span>}
-        </form>
+        <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              placeholder="Search Global Location"
+              className="w-full bg-black/40 border border-white/10 rounded-lg text-white text-xs font-mono px-9 py-2.5 outline-none focus:border-neon-cyan/50 focus:shadow-[0_0_15px_rgba(0,242,255,0.2)] transition-all"
+            />
+            <Search size={14} color="var(--primary)" className="absolute left-3 top-3 opacity-70" />
+            {(searching || isTyping) && <span className="absolute right-3 top-3.5 text-[9px] text-neon-cyan tracking-widest animate-pulse">SCANNING</span>}
+          </form>
+
+          {/* Autocomplete Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-black/95 border border-neon-cyan/30 rounded-lg overflow-hidden z-50 shadow-[0_4px_20px_rgba(0,242,255,0.15)] backdrop-blur-xl">
+              {suggestions.map((sug, idx) => (
+                <div 
+                  key={idx} 
+                  className="px-4 py-3 text-xs text-white/80 font-mono hover:bg-neon-cyan/20 hover:text-white cursor-pointer border-b border-white/5 last:border-0 transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    setSearchQuery(sug.display_name);
+                    setShowSuggestions(false);
+                    if (onLocationSelect) onLocationSelect(parseFloat(sug.lat), parseFloat(sug.lon));
+                  }}
+                >
+                  <Search size={10} className="text-neon-cyan opacity-50 flex-shrink-0" />
+                  <div className="truncate">{sug.display_name}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ─── Layer Controls ─── */}

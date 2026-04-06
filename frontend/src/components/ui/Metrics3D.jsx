@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Box, Html, Float } from '@react-three/drei';
+import { Box, Float, Text, Billboard } from '@react-three/drei';
 
 function MetricPillar({ index, position, height, color, label, value }) {
   const meshRef = useRef();
@@ -36,18 +36,33 @@ function MetricPillar({ index, position, height, color, label, value }) {
       </Box>
 
       {/* Floating Label */}
-      <Html position={[0, labelHeight, 0]} center zIndexRange={[100, 0]}>
-        <div className="text-white font-mono text-[9px] whitespace-nowrap drop-shadow-[0_0_2px_rgba(0,0,0,1)] bg-black/40 px-1 rounded">
+      <Billboard position={[0, labelHeight, 0]}>
+        <Text
+          fontSize={0.25}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.02}
+          outlineColor="black"
+        >
           {label}
-        </div>
-      </Html>
+        </Text>
+      </Billboard>
       
       {/* Floating Value */}
-      <Html position={[0, labelHeight - 0.35, 0]} center zIndexRange={[100, 0]}>
-        <div className="font-display text-sm whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-bold" style={{ color: color }}>
+      <Billboard position={[0, labelHeight - 0.35, 0]}>
+        <Text
+          fontSize={0.35}
+          fontWeight="bold"
+          color={color}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.02}
+          outlineColor="black"
+        >
           {(value * 100).toFixed(1)}%
-        </div>
-      </Html>
+        </Text>
+      </Billboard>
     </group>
   );
 }

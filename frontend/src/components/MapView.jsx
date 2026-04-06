@@ -7,15 +7,26 @@ import { Sun, Moon } from 'lucide-react';
 
 // A dynamic tooltip that follows the cursor on the map
 function HoverPreview({ map }) {
-  const [pos, setPos] = useState({ x: -100, y: -100, active: false });
+  const previewRef = useRef(null);
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
     if (!map) return;
+    let isVisible = false;
+    
     const moveFn = (e) => {
-      // Offset slightly from cursor relative to map container
-      setPos({ x: e.containerPoint.x + 15, y: e.containerPoint.y + 15, active: true });
+      if (!isVisible) {
+        isVisible = true;
+        setActive(true);
+      }
+      if (previewRef.current) {
+        previewRef.current.style.transform = `translate(${e.containerPoint.x + 15}px, ${e.containerPoint.y + 15}px)`;
+      }
     };
-    const outFn = () => setPos(p => ({ ...p, active: false }));
+    const outFn = () => {
+      isVisible = false;
+      setActive(false);
+    };
 
     map.on('mousemove', moveFn);
     map.on('mouseout', outFn);
@@ -27,15 +38,17 @@ function HoverPreview({ map }) {
 
   return (
     <AnimatePresence>
-      {pos.active && (
+      {active && (
         <motion.div
+          ref={previewRef}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.15 }}
           style={{
-            position: 'absolute', left: pos.x, top: pos.y, zIndex: 9999,
+            position: 'absolute', left: 0, top: 0, zIndex: 9999,
             pointerEvents: 'none',
+            willChange: 'transform'
           }}
           className="bg-black/80 backdrop-blur-md border border-cyan-500/50 rounded-lg px-3 py-2 shadow-[0_0_15px_rgba(0,242,255,0.3)] text-white text-xs font-mono"
         >
