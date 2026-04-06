@@ -20,7 +20,7 @@ export function UHIProvider({ children }) {
   const [mlLoading, setMlLoading] = useState(false);  // ML endpoint in-flight
 
   // Map Layers & Hotspots
-  const [layers, setLayers] = useState({ heat: true, veg: false, density: false, ntl: false });
+  const [layers, setLayers] = useState({ heat: false, veg: false, density: false, ntl: false });
   const [layerOpacity, setLayerOpacity] = useState({ heat: 0.85, veg: 0.85, density: 0.85, ntl: 0.85 });
   const [tileLayers, setTileLayers] = useState({});
   const [tileMeta, setTileMeta] = useState({});

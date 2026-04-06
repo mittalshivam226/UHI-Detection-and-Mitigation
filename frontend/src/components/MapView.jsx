@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useUHIContext } from '../context/UHIContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sun, Moon } from 'lucide-react';
 
 // A dynamic tooltip that follows the cursor on the map
 function HoverPreview({ map }) {
@@ -66,7 +67,7 @@ function ClickRipple({ pos }) {
 }
 
 export default function MapView({ onMapClick, onMapMoveEnd }) {
-  const { layers, layerOpacity, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme } = useUHIContext();
+  const { layers, layerOpacity, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme, setMapTheme } = useUHIContext();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const baseTileRef = useRef(null);
@@ -85,6 +86,8 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     onMapMoveEndRef.current = onMapMoveEnd;
   }, [onMapClick, onMapMoveEnd]);
 
+  // ... (rest of the file remains standard)
+  
   // Initialize Map
   useEffect(() => {
     if (mapInstanceRef.current) return;
@@ -107,7 +110,7 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     return () => { map.remove(); mapInstanceRef.current = null; };
   }, []);
 
-  // Handle Map Theme (Dark ↔ Light)
+  // Handle Map Theme (Dark <-> Light)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !baseTileRef.current) return;
@@ -179,17 +182,19 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     
     Object.keys(LAYER_KEY_MAP).forEach((toggle) => {
       const tileUrl = tileLayers?.[toggle];
-      if (tileUrl && !tileLayersRef.current[toggle]) {
+      const isActive = layers[toggle];
+      
+      if (isActive && tileUrl && !tileLayersRef.current[toggle]) {
         const opacity = layerOpacity?.[toggle] ?? 0.85;
         const tl = L.tileLayer(tileUrl, { opacity, className: `tile-layer-${toggle}` });
         tl.addTo(map);
         tileLayersRef.current[toggle] = tl;
-      } else if (!tileUrl && tileLayersRef.current[toggle]) {
+      } else if ((!isActive || !tileUrl) && tileLayersRef.current[toggle]) {
         tileLayersRef.current[toggle].remove();
         delete tileLayersRef.current[toggle];
       }
     });
-  }, [tileLayers, layerOpacity]);
+  }, [tileLayers, layerOpacity, layers]);
 
   // Handle Opacity changes dynamically for existing layers
   useEffect(() => {
@@ -256,6 +261,18 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
   return (
     <>
       <div ref={mapRef} data-theme={mapTheme} className="map-container relative z-0 h-full w-full" />
+      
+      {/* Theme Toggle Button Overlay */}
+      <div className="absolute top-4 right-4 z-[999] pointer-events-auto">
+        <button
+          onClick={() => setMapTheme(mapTheme === 'dark' ? 'light' : 'dark')}
+          className="p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white/70 hover:text-white hover:bg-black/80 hover:border-white/30 transition-all shadow-lg"
+          title={`Switch to ${mapTheme === 'dark' ? 'Light' : 'Dark'} Map Theme`}
+        >
+          {mapTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+      </div>
+
       <HoverPreview map={mapInstanceRef.current} />
       <ClickRipple pos={clickScreenPos} />
     </>
