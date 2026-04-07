@@ -152,7 +152,7 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     hotspotLayersRef.current.forEach(l => l.remove());
     hotspotLayersRef.current = [];
 
-    if (layers.heat) {
+    if (layers.uhi) {
       hotspots.forEach(h => {
         const temp = h.temp - (simulationState?.overlayActive ? (simulationState.predictedReduction || 0) : 0);
         const color = temp > 40 ? '#FF3B3B' : temp > 36 ? '#ff7722' : '#FFD700'; // Default thermal

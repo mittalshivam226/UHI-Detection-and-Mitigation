@@ -62,6 +62,9 @@ export default function DashboardPage() {
     const active = !layers[layerId];
     setLayers(p => ({ ...p, [layerId]: active }));
     
+    // Predicted UHI layer is purely vector (drawn via React Leaflet), so we skip fetching a raster tile.
+    if (layerId === 'uhi') return;
+
     if (active && (!tileLayers[layerId] || !tileMeta[layerId])) {
       setTileLoading(p => ({ ...p, [layerId]: true }));
       try {

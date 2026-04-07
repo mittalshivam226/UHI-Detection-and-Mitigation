@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Layers, Thermometer, TreePine, Building2, Lightbulb, Search } from 'lucide-react';
+import { Layers, Thermometer, TreePine, Building2, Lightbulb, Search, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useUHIContext } from '../context/UHIContext.jsx';
 
 const LAYERS_CONFIG = [
   { id: 'heat',    label: 'Surface Temp',   color: '#FF3B3B', gradient: 'linear-gradient(90deg, #ffd700, #ff7722, #FF3B3B)', Icon: Thermometer },
+  { id: 'uhi',     label: 'Predicted UHI',  color: '#FF00E5', gradient: 'linear-gradient(90deg, #ff7722, #FF3B3B, #FF00E5)', Icon: Flame },
   { id: 'veg',     label: 'Vegetation',     color: '#00e676', gradient: 'linear-gradient(90deg, #a5d6a7, #69f0ae, #00e676)', Icon: TreePine    },
   { id: 'density', label: 'Urban density',  color: '#FFD700', gradient: 'linear-gradient(90deg, #fff9c4, #ffe082, #FFD700)', Icon: Building2   },
   { id: 'ntl',     label: 'Nighttime Lights', color: '#fde725', gradient: 'linear-gradient(90deg, #440154, #21908c, #fde725)', Icon: Lightbulb   },
