@@ -7,16 +7,45 @@ import {
   TrendingUp, AlertTriangle, CheckCircle, Play,
 } from 'lucide-react';
 
-// ─── Dot Grid Background ────────────────────────────────────────────────────
-function DotGrid() {
+// ─── Star Field Background (matches old landing page aesthetic) ──────────────
+function StarField() {
+  // Pre-generate star positions deterministically so no hydration issues
+  const stars = React.useMemo(() => {
+    const s = [];
+    // layer 1: tiny dim stars
+    for (let i = 0; i < 180; i++) {
+      s.push({ x: (i * 137.5) % 100, y: (i * 79.3) % 100, size: 1, opacity: 0.2 + (i % 5) * 0.07, delay: i * 0.05 });
+    }
+    // layer 2: medium stars
+    for (let i = 0; i < 80; i++) {
+      s.push({ x: (i * 211.7) % 100, y: (i * 153.1) % 100, size: 1.5, opacity: 0.35 + (i % 4) * 0.1, delay: i * 0.08 });
+    }
+    // layer 3: bright accent stars
+    for (let i = 0; i < 30; i++) {
+      s.push({ x: (i * 317.3) % 100, y: (i * 241.9) % 100, size: 2, opacity: 0.6 + (i % 3) * 0.13, delay: i * 0.15 });
+    }
+    return s;
+  }, []);
+
   return (
-    <div
-      className="absolute inset-0 pointer-events-none"
-      style={{
-        backgroundImage: 'radial-gradient(circle, rgba(0,242,255,0.12) 1px, transparent 1px)',
-        backgroundSize: '32px 32px',
-      }}
-    />
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {stars.map((star, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: star.size,
+            height: star.size,
+            borderRadius: '50%',
+            background: '#ffffff',
+            opacity: star.opacity,
+            animation: `twinkle ${2 + (i % 5)}s ease-in-out ${star.delay}s infinite alternate`,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -222,7 +251,7 @@ export default function LandingPage() {
     <div
       id="landing-scroller"
       className="w-full h-full pointer-events-auto overflow-y-auto"
-      style={{ background: '#000', color: '#e2e2e2' }}
+      style={{ background: '#080d1a', color: '#e2e2e2' }}
     >
 
       {/* ══════════════ SECTION 1: HERO ══════════════ */}
@@ -232,14 +261,16 @@ export default function LandingPage() {
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden', padding: '80px 24px 60px',
+          background: 'linear-gradient(180deg, #040812 0%, #080d1a 40%, #0b1421 100%)',
         }}
       >
-        {/* Dot grid */}
-        <DotGrid />
+        {/* Star field */}
+        <StarField />
 
         {/* Radial glow orbs */}
-        <div style={{ position: 'absolute', top: '20%', left: '20%', width: 600, height: 600, background: 'radial-gradient(circle, rgba(0,242,255,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '20%', right: '15%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(255,0,229,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '15%', left: '15%', width: 700, height: 700, background: 'radial-gradient(circle, rgba(0,242,255,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '15%', right: '10%', width: 600, height: 600, background: 'radial-gradient(circle, rgba(255,0,229,0.04) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 900, background: 'radial-gradient(circle, rgba(11,20,33,0) 0%, rgba(4,8,18,0.6) 100%)', pointerEvents: 'none' }} />
 
         {/* Scan line */}
         <div style={{
@@ -380,7 +411,7 @@ export default function LandingPage() {
       </div>
 
       {/* ══════════════ SECTION 2: THREAT ASSESSMENT ══════════════ */}
-      <Section id="threat" style={{ padding: '100px 5vw', background: 'rgba(0,0,0,0.97)', position: 'relative', overflow: 'hidden' }}>
+      <Section id="threat" style={{ padding: '100px 5vw', background: '#080d1a', position: 'relative', overflow: 'hidden' }}>
         {/* Thermal gradient bg */}
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,0,0,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
@@ -423,7 +454,7 @@ export default function LandingPage() {
       </Section>
 
       {/* ══════════════ SECTION 3: CAPABILITIES ══════════════ */}
-      <Section id="capabilities" style={{ padding: '100px 5vw', background: '#000' }}>
+      <Section id="capabilities" style={{ padding: '100px 5vw', background: '#0b1421' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
             <Zap size={20} color="#00F2FF" />
@@ -476,7 +507,7 @@ export default function LandingPage() {
       </Section>
 
       {/* ══════════════ SECTION 4: MISSION PROTOCOL ══════════════ */}
-      <Section id="protocol" style={{ padding: '100px 5vw', background: 'rgba(0,0,0,0.97)' }}>
+      <Section id="protocol" style={{ padding: '100px 5vw', background: '#080d1a' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
             <Play size={20} color="#00F2FF" />
@@ -528,11 +559,12 @@ export default function LandingPage() {
           minHeight: '100vh', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           padding: '100px 24px',
-          background: '#000', position: 'relative', overflow: 'hidden',
+          background: 'linear-gradient(180deg, #0b1421 0%, #040812 100%)', position: 'relative', overflow: 'hidden',
           textAlign: 'center',
         }}
       >
         <DotGrid />
+        <StarField />
         <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 800, height: 800, background: 'radial-gradient(circle, rgba(0,242,255,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         <motion.div
