@@ -199,26 +199,32 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
       const targetOpacity = layerOpacity?.[toggle] ?? 0.85;
       const existing = tileLayersRef.current[toggle];
 
-      if (tileUrl && !existing) {
-        // First time this URL is seen — create the layer but respect active state
-        const tl = L.tileLayer(tileUrl, {
-          opacity: isActive ? targetOpacity : 0,
-          className: `tile-layer-${toggle}`,
-        });
-        tl.addTo(map);
-        tileLayersRef.current[toggle] = tl;
-      } else if (existing) {
-        if (!tileUrl) {
-          // URL gone (e.g. cleared externally) — remove fully
+      if (!tileUrl) {
+        // No URL at all — remove if it exists
+        if (existing) {
           existing.remove();
           delete tileLayersRef.current[toggle];
-        } else if (tileUrl !== existing._url) {
-          // URL changed — swap to new tile, keep visibility
+        }
+        return;
+      }
+
+      if (!existing) {
+        // First time: create the layer object and store it
+        const tl = L.tileLayer(tileUrl, { opacity: targetOpacity, className: `tile-layer-${toggle}` });
+        tileLayersRef.current[toggle] = tl;
+        if (isActive) tl.addTo(map); // only add to map if currently active
+      } else {
+        // Layer object exists — update URL if changed
+        if (tileUrl !== existing._url) {
           existing.setUrl(tileUrl);
-          existing.setOpacity(isActive ? targetOpacity : 0);
-        } else {
-          // Same tile — just toggle visibility instantly via opacity
-          existing.setOpacity(isActive ? targetOpacity : 0);
+        }
+        // Toggle map presence based on active state
+        const onMap = map.hasLayer(existing);
+        if (isActive && !onMap) {
+          existing.setOpacity(targetOpacity);
+          existing.addTo(map);             // instant — browser cache serves tiles
+        } else if (!isActive && onMap) {
+          existing.remove();               // removes from DOM, object stays in ref
         }
       }
     });
