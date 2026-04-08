@@ -62,27 +62,21 @@ export default function DashboardPage() {
     const active = !layers[layerId];
     setLayers(p => ({ ...p, [layerId]: active }));
 
-    // BUG FIX: When toggling OFF, clear the tile layer so the map removes it
-    if (!active) {
-      setTileLayers(p => { const n = { ...p }; delete n[layerId]; return n; });
-      setTileMeta(p  => { const n = { ...p }; delete n[layerId]; return n; });
-      return;
-    }
-
     // Predicted UHI layer is purely vector (drawn via React Leaflet), so we skip fetching a raster tile.
     if (layerId === 'uhi') return;
 
-    if (!tileLayers[layerId] || !tileMeta[layerId]) {
+    // Only fetch if turning ON and we don't already have a cached tile URL
+    if (active && (!tileLayers[layerId] || !tileMeta[layerId])) {
       setTileLoading(p => ({ ...p, [layerId]: true }));
       try {
         const center = pos || { lat: 40.74, lon: -73.99 };
         const layerMap = { heat: 'lst', veg: 'ndvi', density: 'ndbi', ntl: 'ntl' };
         const backendLayer = layerMap[layerId] || layerId;
-        
+
         const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
         const res = await fetch(`${API_BASE}/api/layer-tiles?layer=${backendLayer}&lat=${center.lat}&lon=${center.lng || center.lon || -73.99}`);
         const data = await res.json();
-        
+
         setTileLayers(p => ({ ...p, [layerId]: data.tile_url }));
         if (data.metadata) {
           setTileMeta(p => ({ ...p, [layerId]: data.metadata }));
@@ -93,6 +87,9 @@ export default function DashboardPage() {
         setTileLoading(p => ({ ...p, [layerId]: false }));
       }
     }
+    // When toggling OFF: tileLayers state is intentionally kept intact.
+    // MapView hides the layer instantly via setOpacity(0) and shows it
+    // instantly via setOpacity(targetOpacity) — no re-fetch needed.
   };
 
   const handleLocationSelect = (lat, lng) => {

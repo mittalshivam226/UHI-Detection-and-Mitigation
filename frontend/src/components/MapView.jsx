@@ -192,19 +192,34 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     const map = mapInstanceRef.current;
     if (!map) return;
     const LAYER_KEY_MAP = { heat: 'lst', veg: 'ndvi', density: 'ndbi', ntl: 'ntl' };
-    
+
     Object.keys(LAYER_KEY_MAP).forEach((toggle) => {
       const tileUrl = tileLayers?.[toggle];
       const isActive = layers[toggle];
-      
-      if (isActive && tileUrl && !tileLayersRef.current[toggle]) {
-        const opacity = layerOpacity?.[toggle] ?? 0.85;
-        const tl = L.tileLayer(tileUrl, { opacity, className: `tile-layer-${toggle}` });
+      const targetOpacity = layerOpacity?.[toggle] ?? 0.85;
+      const existing = tileLayersRef.current[toggle];
+
+      if (tileUrl && !existing) {
+        // First time this URL is seen — create the layer but respect active state
+        const tl = L.tileLayer(tileUrl, {
+          opacity: isActive ? targetOpacity : 0,
+          className: `tile-layer-${toggle}`,
+        });
         tl.addTo(map);
         tileLayersRef.current[toggle] = tl;
-      } else if ((!isActive || !tileUrl) && tileLayersRef.current[toggle]) {
-        tileLayersRef.current[toggle].remove();
-        delete tileLayersRef.current[toggle];
+      } else if (existing) {
+        if (!tileUrl) {
+          // URL gone (e.g. cleared externally) — remove fully
+          existing.remove();
+          delete tileLayersRef.current[toggle];
+        } else if (tileUrl !== existing._url) {
+          // URL changed — swap to new tile, keep visibility
+          existing.setUrl(tileUrl);
+          existing.setOpacity(isActive ? targetOpacity : 0);
+        } else {
+          // Same tile — just toggle visibility instantly via opacity
+          existing.setOpacity(isActive ? targetOpacity : 0);
+        }
       }
     });
   }, [tileLayers, layerOpacity, layers]);
