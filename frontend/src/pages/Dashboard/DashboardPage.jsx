@@ -20,6 +20,9 @@ export default function DashboardPage() {
     setFlyTo
   } = useUHIContext();
 
+  // ── API base URL (hoisted so all handlers can access it) ──
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
+
   const handleMapClick = async (lat, lng) => {
     setPos({ lat, lng });
     setLoading(true);
@@ -27,9 +30,8 @@ export default function DashboardPage() {
 
     const reqBody = JSON.stringify({ lat, lon: lng, radius_m: 1000 });
     const reqOpts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: reqBody };
-    
+
     // Legacy API fetch
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002';
     fetch(`${API_BASE}/api/analyze-location`, reqOpts)
       .then(res => { if (!res.ok) throw new Error('API failed'); return res.json(); })
       .then(data => setAnalysis(data))
@@ -42,20 +44,47 @@ export default function DashboardPage() {
       .then(data => setMlData(data))
       .catch(err => console.error(err))
       .finally(() => setMlLoading(false));
+
+    // Auto-scan nearby hotspots for the new location (drives Predictive UHI circles)
+    scanHotspots(lat, lng);
   };
 
-  const handleScanRegion = async () => {
-    if (!pos) return;
+  // ── Scan hotspots around a lat/lng, with mock fallback ──
+  const scanHotspots = async (lat, lng) => {
     setHotspotsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/hotspots?lat=${pos.lat}&lon=${pos.lng}&radius_km=5`);
+      const res = await fetch(`${API_BASE}/api/hotspots?lat=${lat}&lon=${lng}&radius_km=5`);
+      if (!res.ok) throw new Error('hotspots API failed');
       const data = await res.json();
-      setHotspots(Array.isArray(data) ? data : []);
+      setHotspots(Array.isArray(data) && data.length > 0 ? data : generateMockHotspots(lat, lng));
     } catch (e) {
-      console.error(e);
+      console.warn('Hotspot API unavailable — using generated mock data:', e.message);
+      setHotspots(generateMockHotspots(lat, lng));
     } finally {
       setHotspotsLoading(false);
     }
+  };
+
+  // ── Generate mock hotspots around any lat/lng when the backend is offline ──
+  const generateMockHotspots = (lat, lng) => {
+    const offsets = [
+      { dlat:  0.005, dlng:  0.008, name: 'Urban Core',       temp: 41.2 },
+      { dlat: -0.004, dlng:  0.006, name: 'Industrial Zone',  temp: 39.1 },
+      { dlat:  0.007, dlng: -0.005, name: 'Commercial Strip', temp: 38.5 },
+      { dlat: -0.006, dlng: -0.007, name: 'Dense Residential',temp: 37.8 },
+      { dlat:  0.002, dlng:  0.012, name: 'Transport Hub',    temp: 40.3 },
+    ];
+    return offsets.map(o => ({
+      lat:  lat  + o.dlat,
+      lng:  lng  + o.dlng,
+      temp: o.temp,
+      name: o.name,
+    }));
+  };
+
+  const handleScanRegion = () => {
+    if (!pos) return;
+    scanHotspots(pos.lat, pos.lng);
   };
 
   const handleLayerToggle = async (layerId) => {

@@ -2,14 +2,6 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const UHIContext = createContext();
 
-const DEFAULT_HOTSPOTS = [
-  { lat: 40.758, lng: -73.985, temp: 41.2, name: 'Midtown West' },
-  { lat: 40.730, lng: -73.990, temp: 38.8, name: 'Chelsea' },
-  { lat: 40.712, lng: -74.005, temp: 37.1, name: 'Downtown' },
-  { lat: 40.778, lng: -73.967, temp: 39.4, name: 'Upper West Side' },
-  { lat: 40.749, lng: -73.975, temp: 40.0, name: 'Koreatown' },
-];
-
 export function UHIProvider({ children }) {
   // Core Location & Analysis Data
   const [pos, setPos] = useState(null);
@@ -25,7 +17,7 @@ export function UHIProvider({ children }) {
   const [tileLayers, setTileLayers] = useState({});
   const [tileMeta, setTileMeta] = useState({});
   const [tileLoading, setTileLoading] = useState({});
-  const [hotspots, setHotspots] = useState(DEFAULT_HOTSPOTS);
+  const [hotspots, setHotspots] = useState([]);           // empty until a location is selected
   const [hotspotsLoading, setHotspotsLoading] = useState(false);
 
   // Simulation State
