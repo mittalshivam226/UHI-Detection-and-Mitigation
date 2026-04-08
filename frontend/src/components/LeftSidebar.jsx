@@ -228,7 +228,7 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
       </div>
 
       {/* ─── Active Hotspots ─── */}
-      <div className="sidebar-section" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div className="sidebar-section" style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div className="sidebar-section-title" style={{ margin: 0 }}>Active Hotspots</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

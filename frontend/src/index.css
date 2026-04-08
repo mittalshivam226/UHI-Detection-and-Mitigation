@@ -283,7 +283,8 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 50;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid var(--outline-light);
 }
 

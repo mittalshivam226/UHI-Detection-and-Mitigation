@@ -61,11 +61,18 @@ export default function DashboardPage() {
   const handleLayerToggle = async (layerId) => {
     const active = !layers[layerId];
     setLayers(p => ({ ...p, [layerId]: active }));
-    
+
+    // BUG FIX: When toggling OFF, clear the tile layer so the map removes it
+    if (!active) {
+      setTileLayers(p => { const n = { ...p }; delete n[layerId]; return n; });
+      setTileMeta(p  => { const n = { ...p }; delete n[layerId]; return n; });
+      return;
+    }
+
     // Predicted UHI layer is purely vector (drawn via React Leaflet), so we skip fetching a raster tile.
     if (layerId === 'uhi') return;
 
-    if (active && (!tileLayers[layerId] || !tileMeta[layerId])) {
+    if (!tileLayers[layerId] || !tileMeta[layerId]) {
       setTileLoading(p => ({ ...p, [layerId]: true }));
       try {
         const center = pos || { lat: 40.74, lon: -73.99 };
@@ -100,9 +107,10 @@ export default function DashboardPage() {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="w-full h-[100vh] pt-[80px] pb-[20px] pointer-events-auto flex flex-row px-6 gap-6 overflow-x-auto overflow-y-hidden min-w-[1280px]"
+      className="w-full h-[100vh] pt-[70px] pb-[16px] pointer-events-auto flex flex-row px-4 gap-4 overflow-x-auto overflow-y-hidden min-w-[1280px]"
     >
-      <div className="flex-none w-[320px] h-full relative z-20">
+      {/* Bug Fix 1: wider sidebar (w-[360px]), Bug Fix 2: overflow-y-auto on sidebar wrapper */}
+      <div className="flex-none w-[360px] h-full relative z-20 overflow-y-auto">
         <LeftSidebar 
           layers={layers}
           onLayerToggle={handleLayerToggle}
