@@ -139,6 +139,14 @@ body {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.35; }
 }
+@keyframes slideRight {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,242,255,0.15), 0 0 15px rgba(0,242,255,0.08); }
+  50%       { box-shadow: 0 0 20px rgba(0,242,255,0.4), 0 0 35px rgba(0,242,255,0.2); }
+}
 
 /* =============================================
    SKELETON SHIMMER
@@ -242,6 +250,12 @@ body {
   flex-shrink: 0;
 }
 .top-bar-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.top-bar-mission-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
 .icon-btn {
   width: 34px; height: 34px;
   background: rgba(0,0,0,0.2);

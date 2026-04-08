@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, ShieldCheck } from 'lucide-react';
 import AuthModal from '../components/ui/AuthModal';
+import { MissionStatusBadges } from '../components/MissionStatusBar.jsx';
 
 export default function NavigationHUD() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -15,6 +16,11 @@ export default function NavigationHUD() {
           <span className="font-display font-bold text-xl tracking-widest text-white drop-shadow-[0_0_10px_rgba(0,242,255,0.8)]">
             UHI <span className="font-normal text-[0.6em] text-neon-cyan uppercase">Intelligence</span>
           </span>
+        </div>
+
+        {/* ── Mission Status Badges (center of nav) ── */}
+        <div className="hidden lg:flex items-center gap-3 pointer-events-auto">
+          <MissionStatusBadges />
         </div>
         
         <div className="flex items-center gap-8 pointer-events-auto">

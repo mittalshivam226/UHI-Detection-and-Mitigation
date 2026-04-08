@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body style="background:#0a0b10; color:white">
+    <div id="main" style="width: 800px; height: 300px;"></div>
+    <script>
+        var myChart = echarts.init(document.getElementById('main'));
+
+        const shapValues = { "Urban AT": 0.45, "NDVI": -0.1, "EVI": 0.2 };
+        const entries = Object.keys(shapValues).map(k => ({ name: k, val: shapValues[k] })).sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+        
+        let current = 0;
+        const categories = ['Base Log-Odds', ...entries.map(e => e.name), 'Model Output'];
+        const baseData = [0];
+        const posData = [0];
+        const negData = [0];
+
+        entries.forEach(e => {
+            if (e.val > 0) {
+            baseData.push(current);
+            posData.push(e.val);
+            negData.push(0);
+            current += e.val;
+            } else {
+            current += e.val;
+            baseData.push(current);
+            posData.push(0);
+            negData.push(Math.abs(e.val));
+            }
+        });
+
+        baseData.push(0);
+        posData.push(current);
+        negData.push(0);
+
+        var option = {
+            backgroundColor: 'transparent',
+            xAxis: { 
+                type: 'category', data: categories, 
+                axisLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 9 }
+            },
+            yAxis: { 
+                type: 'value', 
+                axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 9 } 
+            },
+            series: [
+                {
+                name: 'Placeholder', type: 'bar', stack: 'Total',
+                itemStyle: { borderColor: 'transparent', color: 'transparent' },
+                data: baseData
+                },
+                {
+                name: 'Positive', type: 'bar', stack: 'Total',
+                itemStyle: { color: '#FF3B3B', borderRadius: [2, 2, 0, 0] },
+                data: posData
+                },
+                {
+                name: 'Negative', type: 'bar', stack: 'Total',
+                itemStyle: { color: '#00f2ff', borderRadius: [2, 2, 0, 0] },
+                data: negData
+                }
+            ]
+        };
+        myChart.setOption(option);
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import { useUHIContext } from '../context/UHIContext.jsx';
 import { Search, X, Settings2, Info, Download, Loader, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateReport } from '../utils/generateReport.js';
+import { MissionStatusBadges } from './MissionStatusBar.jsx';
 
 export default function TopNav({ geocoder }) {
   const { pos, analysis, mlData, hotspots, mapTheme, setMapTheme } = useUHIContext();
@@ -38,6 +39,11 @@ export default function TopNav({ geocoder }) {
     >
       <div className="top-bar-logo">
         UHIS <span>Urban Heat Intelligence</span>
+      </div>
+
+      {/* ── Mission Status Badges ── */}
+      <div className="top-bar-mission-status">
+        <MissionStatusBadges />
       </div>
 
       <div className="top-bar-search">

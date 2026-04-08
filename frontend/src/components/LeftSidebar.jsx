@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Layers, Thermometer, TreePine, Building2, Lightbulb, Search, Flame } from 'lucide-react';
+import { Layers, Thermometer, TreePine, Building2, Lightbulb, Search, Flame, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useUHIContext } from '../context/UHIContext.jsx';
+import GlobalStatsBar from './GlobalStatsBar.jsx';
+import ThreatGauge from './ThreatGauge.jsx';
 
 const LAYERS_CONFIG = [
   { id: 'heat',    label: 'Surface Temp',   color: '#FF3B3B', gradient: 'linear-gradient(90deg, #ffd700, #ff7722, #FF3B3B)', Icon: Thermometer },
@@ -115,8 +117,13 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
       transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
       className="left-sidebar glass-panel-heavy"
     >
+      {/* ─── Live Global Stats ─── */}
+      <div className="sidebar-section pb-2 pt-4">
+        <GlobalStatsBar />
+      </div>
+
       {/* ─── Global Search ─── */}
-      <div className="sidebar-section pb-2 pt-5">
+      <div className="sidebar-section pb-2 pt-3">
         <div className="relative">
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -269,34 +276,30 @@ export default function LeftSidebar({ layers, onLayerToggle, tileMeta, tileLoadi
         </motion.div>
       </div>
 
-      {/* ─── City Status ─── */}
+      {/* ─── Threat Intelligence ─── */}
       <div className="sidebar-section">
-        <div className="sidebar-section-title">City Status</div>
-        <div className="stats-grid">
-          <div className="stat-mini">
-            <div className="stat-mini-label">Coverage</div>
-            <div className="stat-mini-value" style={{ color: 'var(--primary)', fontSize: 13, marginTop: -2 }}>
-              <select 
-                style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'inherit', color: 'var(--primary)', textAlign: 'center' }}
-                onChange={(e) => {
-                  const c = CITIES[e.target.value];
-                  if (c && c.lat && onLocationSelect) onLocationSelect(c.lat, c.lng);
-                }}
-              >
-                {CITIES.map((c, i) => (
-                  <option key={i} value={i} style={{ background: '#0a121c', color: 'var(--on-bg)' }}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="stat-mini">
-            <div className="stat-mini-label">Avg LST</div>
-            <div className="stat-mini-value" style={{ color: avgTempColor }}>{avgTemp}°</div>
-          </div>
-          <div className="stat-mini">
-            <div className="stat-mini-label">Hotspots</div>
-            <div className="stat-mini-value" style={{ color: 'var(--secondary)' }}>{hotspots.length}</div>
-          </div>
+        <div className="sidebar-section-title" style={{ marginBottom: 10 }}>
+          Threat Intelligence
+        </div>
+        <ThreatGauge hotspots={hotspots} avgTemp={avgTemp !== '--' ? avgTemp : null} />
+
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '1.5px', color: 'var(--on-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Quick Jump</div>
+          <select
+            style={{
+              width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,242,255,0.15)',
+              borderRadius: 6, color: 'var(--primary)', padding: '6px 10px', outline: 'none',
+              fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+            }}
+            onChange={(e) => {
+              const c = CITIES[e.target.value];
+              if (c && c.lat && onLocationSelect) onLocationSelect(c.lat, c.lng);
+            }}
+          >
+            {CITIES.map((c, i) => (
+              <option key={i} value={i} style={{ background: '#0a121c', color: 'var(--on-bg)' }}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
     </motion.aside>

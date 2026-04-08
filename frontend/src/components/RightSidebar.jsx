@@ -407,12 +407,156 @@ export default function RightSidebar() {
 
   if (!pos && !loading && !analysis && !mlData) {
     return (
-      <motion.aside initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="right-panel glass-panel-heavy" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="right-panel-empty">
-          <div className="right-panel-empty-icon" style={{ marginBottom: 12 }}><MapPin size={32} color="var(--primary)" /></div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, color: 'var(--on-bg)', marginBottom: 10 }}>Select a Location</div>
-          <div className="right-panel-empty-text" style={{ fontSize: 13, color: 'var(--on-muted)', lineHeight: 1.5 }}>
-            Click anywhere on the map to extract high-resolution thermal records and analyze UHI conditions in real time.
+      <motion.aside
+        initial={{ x: 300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        className="right-panel glass-panel-heavy"
+        style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* ── Mission Control Active Banner ── */}
+        <div style={{
+          padding: '20px 20px 16px',
+          borderBottom: '1px solid rgba(0,242,255,0.1)',
+          background: 'linear-gradient(135deg, rgba(0,242,255,0.05) 0%, rgba(0,0,0,0) 60%)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '50%',
+                border: '1px solid rgba(0,242,255,0.4)',
+                animation: 'pulse-ring 2s ease-in-out infinite',
+              }} />
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'radial-gradient(circle at 35% 35%, rgba(0,242,255,0.3), rgba(0,0,0,0.8))',
+                border: '1px solid rgba(0,242,255,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 0 20px rgba(0,242,255,0.2)',
+              }}>
+                <MapPin size={16} color="var(--primary)" />
+              </div>
+            </div>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                Mission Control Active
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--on-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', marginTop: 2 }}>
+                Centralized Urban Heat Intelligence Interface
+              </div>
+            </div>
+          </div>
+
+          {/* 3-Step Guide */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {[
+              { n: '01', label: 'Global Search', desc: 'Search any city or click the map', color: 'var(--primary)' },
+              { n: '02', label: 'Thermal Scan', desc: 'Review ML-powered UHI analysis', color: '#FF00E5' },
+              { n: '03', label: 'Simulate Impact', desc: 'Model cooling interventions live', color: '#00e676' },
+            ].map((step) => (
+              <div key={step.n} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                  background: `${step.color}18`, border: `1px solid ${step.color}44`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, color: step.color,
+                }}>
+                  {step.n}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--on-bg)' }}>{step.label}</div>
+                  <div style={{ fontSize: 9, color: 'var(--on-muted)', marginTop: 1 }}>{step.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pulsing CTA */}
+          <motion.button
+            whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(0,242,255,0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%', padding: '10px 16px',
+              background: 'linear-gradient(135deg, rgba(0,242,255,0.15), rgba(0,242,255,0.05))',
+              border: '1px solid rgba(0,242,255,0.4)',
+              borderRadius: 8, color: 'var(--primary)',
+              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+              letterSpacing: '2px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: '0 0 15px rgba(0,242,255,0.1)',
+              animation: 'glowPulse 2.5s ease-in-out infinite',
+            }}
+          >
+            <Zap size={13} /> EXECUTE PROTOCOL
+          </motion.button>
+        </div>
+
+        {/* ── Awaiting Coordinates Animated State ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 24px' }}>
+          {/* Animated orbit rings */}
+          <div style={{ position: 'relative', width: 100, height: 100, marginBottom: 20 }}>
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '1px solid rgba(0,242,255,0.15)',
+              animation: 'spin 8s linear infinite',
+            }}>
+              <div style={{
+                position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)',
+                width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)',
+                boxShadow: '0 0 8px var(--primary)',
+              }} />
+            </div>
+            <div style={{
+              position: 'absolute', inset: 14, borderRadius: '50%',
+              border: '1px solid rgba(255,0,229,0.12)',
+              animation: 'spin 5s linear infinite reverse',
+            }}>
+              <div style={{
+                position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)',
+                width: 5, height: 5, borderRadius: '50%', background: '#FF00E5',
+                boxShadow: '0 0 6px #FF00E5',
+              }} />
+            </div>
+            <div style={{
+              position: 'absolute', inset: 28, borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 35%, rgba(0,242,255,0.25), rgba(0,0,0,0.9))',
+              border: '1px solid rgba(0,242,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 20px rgba(0,242,255,0.1)',
+            }}>
+              <Zap size={14} color="var(--primary)" style={{ opacity: 0.8 }} />
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '2px',
+              color: 'var(--primary)', textTransform: 'uppercase', marginBottom: 8,
+              animation: 'dotPulse 1.8s ease-in-out infinite',
+            }}>
+              ◎ AWAITING COORDINATES
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--on-muted)', lineHeight: 1.6, maxWidth: 260 }}>
+              Select a point on the interactive map to extract high-resolution thermal records and analyze UHI conditions in real time.
+            </div>
+          </div>
+
+          {/* Feature preview chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 20, justifyContent: 'center' }}>
+            {[
+              { label: 'ML Analysis', color: '#a78bfa' },
+              { label: 'Thermal Scan', color: '#FF3B3B' },
+              { label: 'UHI Score', color: 'var(--primary)' },
+              { label: 'Sim Engine', color: '#00e676' },
+            ].map(chip => (
+              <div key={chip.label} style={{
+                padding: '3px 10px', borderRadius: 20,
+                background: `${chip.color}12`, border: `1px solid ${chip.color}30`,
+                fontSize: 9, fontFamily: 'var(--font-mono)', color: chip.color,
+                letterSpacing: '0.5px',
+              }}>
+                {chip.label}
+              </div>
+            ))}
           </div>
         </div>
       </motion.aside>
