@@ -7,14 +7,24 @@ os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 import ee
 
-GEE_KEY_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "gee-key.json"))
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 def init_gee():
-    with open(GEE_KEY_PATH) as f:
-        key = json.load(f)
-    creds = ee.ServiceAccountCredentials(key["client_email"], GEE_KEY_PATH)
-    ee.Initialize(creds)
-    print("GEE initialized:", key["client_email"])
+    if "GEE_KEY" not in os.environ:
+        print(f"❌ GEE_KEY env var not set.")
+        return
+    try:
+        key_data = json.loads(os.environ["GEE_KEY"])
+        temp_path = "/tmp/gee-key.json" if os.name != "nt" else "local_temp_key.json"
+        with open(temp_path, "w") as f:
+            json.dump(key_data, f)
+        creds = ee.ServiceAccountCredentials(key_data["client_email"], temp_path)
+        ee.Initialize(creds)
+        print(f"✅ GEE Auth Success: {key_data['client_email']}")
+    except Exception as e:
+        print(f"❌ GEE Auth Failed: {e}")
+        return
 
 URBAN_BUFFER_M = 2_000
 RURAL_INNER_M  = 8_000

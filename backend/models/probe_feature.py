@@ -1,9 +1,18 @@
 import json, ee, os
 
-GEE_KEY_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "gee-key.json"))
-with open(GEE_KEY_PATH) as f:
-    key = json.load(f)
-ee.Initialize(ee.ServiceAccountCredentials(key["client_email"], GEE_KEY_PATH))
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+
+if "GEE_KEY" not in os.environ:
+    import sys
+    print("❌ GEE_KEY env var not set.")
+    sys.exit(1)
+
+key_data = json.loads(os.environ["GEE_KEY"])
+temp_path = "/tmp/gee-key.json" if os.name != "nt" else "local_temp_key.json"
+with open(temp_path, "w") as f:
+    json.dump(key_data, f)
+ee.Initialize(ee.ServiceAccountCredentials(key_data["client_email"], temp_path))
 
 # Tokyo quick probe
 point = ee.Geometry.Point([139.692, 35.689])

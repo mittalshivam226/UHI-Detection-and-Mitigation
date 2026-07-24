@@ -34,9 +34,6 @@ from app.utils.thresholds import (
 
 logger = logging.getLogger(__name__)
 
-# Path to the service account credentials file (sits beside the app/ package)
-_GEE_KEY_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "gee-key.json")
-_GEE_KEY_PATH = os.path.normpath(_GEE_KEY_PATH)
 
 _gee_ready: bool = False
 
@@ -60,19 +57,9 @@ def initialize() -> bool:
             _gee_ready = True
             logger.info("Earth Engine initialized successfully (ENV).")
             return True
-
-        # Fallback to local file
-        if not os.path.exists(_GEE_KEY_PATH):
-            logger.error("GEE key file not found at %s and GEE_KEY env var not set.", _GEE_KEY_PATH)
+        else:
+            logger.error("GEE_KEY env var not set.")
             return False
-
-        with open(_GEE_KEY_PATH) as f:
-            key_data = json.load(f)
-        credentials = ee.ServiceAccountCredentials(key_data["client_email"], _GEE_KEY_PATH)
-        ee.Initialize(credentials)
-        _gee_ready = True
-        logger.info("Earth Engine initialized successfully (service account: %s)", key_data["client_email"])
-        return True
     except Exception as exc:
         logger.exception("Failed to initialize Earth Engine: %s", exc)
         return False

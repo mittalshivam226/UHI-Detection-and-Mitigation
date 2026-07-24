@@ -11,6 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import analyze, simulate, hotspots, ml_routes, tiles
 from app.services import gee_service, ml_service
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
