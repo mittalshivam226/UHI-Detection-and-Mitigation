@@ -103,17 +103,7 @@ npm run dev
 ```
 *The app will be available at `http://localhost:5173`.*
 
----
 
-## 🧪 Documentation
-
-For an in-depth understanding of the ML algorithms, architectural choices, and the transition from v1 to v2.1, refer to the included technical documentation:
-- [UHI Research Technical Details](./UHI_Research_Technical_Details.txt)
-- [UHI Research Paper Details](./UHI_Research_Paper_Details.md)
-- [UHI Dataflow Details](./UHI_Dataflow_Details.txt)
-- [UHI Workflow Details](./UHI_Workflow_Details.txt)
-
----
 <div align="center">
   <i>Developed to revolutionize sustainable urban planning and extreme heat resilience.</i>
 </div>
