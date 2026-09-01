@@ -39,3 +39,14 @@ yarn-error.log*
 # Temp / scratch scripts
 backend/verify_v2.py
 backend/test_live_ml.py
+
+# Documentation / Research Papers
+Appendix A.txt
+Figures for report.txt
+Result_Analysis_Report.txt
+UHIS_Research_Paper.md
+UHI_Dataflow_Details.txt
+UHI_Research_Paper_Details.md
+UHI_Research_Technical_Details.txt
+UHI_Workflow_Details.txt
+figure_1_uhis_architecture.md
