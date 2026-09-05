@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Box, Float, Text, Billboard } from '@react-three/drei';
+import { Float, Html } from '@react-three/drei';
 
 function MetricPillar({ index, position, height, color, label, value }) {
   const meshRef = useRef();
@@ -8,17 +8,19 @@ function MetricPillar({ index, position, height, color, label, value }) {
   useFrame((state) => {
     // Gentle hovering breath effect on the pillars
     if (meshRef.current) {
-      meshRef.current.position.y = position[1] + height / 2 + Math.sin(state.clock.elapsedTime * 2 + position[0]) * 0.05;
+      meshRef.current.position.y =
+        height / 2 + Math.sin(state.clock.elapsedTime * 2 + position[0]) * 0.05;
     }
   });
 
-  // Stagger the labels so they don't perfectly overlap on the camera plane
-  const labelHeight = height + 0.6 + (index !== undefined && index % 2 === 0 ? 0.3 : -0.1);
+  // Stagger label height so adjacent labels don't clash
+  const labelY = height + 0.9 + (index % 2 === 0 ? 0.3 : 0.0);
 
   return (
     <group position={[position[0], 0, position[2]]}>
-      {/* The Bar */}
-      <Box ref={meshRef} args={[0.8, height, 0.8]}>
+      {/* Bar */}
+      <mesh ref={meshRef} position={[0, height / 2, 0]}>
+        <boxGeometry args={[0.8, height, 0.8]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
@@ -28,41 +30,54 @@ function MetricPillar({ index, position, height, color, label, value }) {
           transparent
           opacity={0.8}
         />
-      </Box>
+      </mesh>
 
-      {/* Wireframe Outline for tech feel */}
-      <Box position={[0, height / 2, 0]} args={[0.82, height + 0.02, 0.82]}>
+      {/* Wireframe Outline */}
+      <mesh position={[0, height / 2, 0]}>
+        <boxGeometry args={[0.82, height + 0.02, 0.82]} />
         <meshBasicMaterial color={color} wireframe transparent opacity={0.25} />
-      </Box>
+      </mesh>
 
-      {/* Floating Label */}
-      <Billboard position={[0, labelHeight, 0]}>
-        <Text
-          fontSize={0.25}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.02}
-          outlineColor="black"
+      {/* HTML Label (no troika dependency) */}
+      <Html
+        position={[0, labelY, 0]}
+        center
+        distanceFactor={8}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+          }}
         >
-          {label}
-        </Text>
-      </Billboard>
-      
-      {/* Floating Value */}
-      <Billboard position={[0, labelHeight - 0.35, 0]}>
-        <Text
-          fontSize={0.35}
-          fontWeight="bold"
-          color={color}
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.02}
-          outlineColor="black"
-        >
-          {(value * 100).toFixed(1)}%
-        </Text>
-      </Billboard>
+          <span
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: 'rgba(255,255,255,0.85)',
+              textShadow: '0 0 6px rgba(0,0,0,0.9)',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {label}
+          </span>
+          <span
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              color: color,
+              textShadow: `0 0 8px ${color}`,
+            }}
+          >
+            {(value * 100).toFixed(1)}%
+          </span>
+        </div>
+      </Html>
     </group>
   );
 }
@@ -70,26 +85,24 @@ function MetricPillar({ index, position, height, color, label, value }) {
 export function Metrics3D({ features }) {
   const groupRef = useRef();
 
-  useFrame((state, delta) => {
-    // Slowly orbit the entire cluster
+  useFrame((_, delta) => {
     if (groupRef.current) {
       groupRef.current.rotation.y += delta * 0.15;
     }
   });
 
-  // Calculate scaling factor to keep tallest pillar at a max height
+  // Scale so tallest pillar reaches ~4 units
   const vals = Object.values(features || {});
   const maxVal = vals.length > 0 ? Math.max(...vals) : 1;
   const heightScale = 4.0 / (maxVal === 0 ? 1 : maxVal);
 
-  // Map backend feature keys to UI labels and colors
   const LABELS = {
     lst_delta: 'Urban ΔT', ndvi: 'NDVI', ndbi: 'NDBI',
-    evi: 'EVI', elevation: 'Elevation', ntl: 'Night Lights'
+    evi: 'EVI', elevation: 'Elevation', ntl: 'Night Lights',
   };
   const COLORS = {
     lst_delta: '#FF3B3B', ndvi: '#00e676', ndbi: '#FFD700',
-    evi: '#4ade80', elevation: '#7dd3fc', ntl: '#fde725'
+    evi: '#4ade80', elevation: '#7dd3fc', ntl: '#fde725',
   };
 
   const keys = Object.keys(features || {});
@@ -99,14 +112,14 @@ export function Metrics3D({ features }) {
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
       <group ref={groupRef} position={[0, -2, 0]}>
-        
+
         {/* Foundation Grid */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
           <planeGeometry args={[12, 12, 12, 12]} />
           <meshBasicMaterial color="#00f2ff" wireframe transparent opacity={0.1} />
         </mesh>
-        
-        {/* Center glowing pad */}
+
+        {/* Centre pad */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <circleGeometry args={[radius + 1, 32]} />
           <meshBasicMaterial color="#0a0b10" transparent opacity={0.8} />
@@ -120,11 +133,11 @@ export function Metrics3D({ features }) {
           const rawValue = features[key];
           const value = typeof rawValue === 'number' && !isNaN(rawValue) ? rawValue : 0;
           const calculatedHeight = value * heightScale;
-          // Ensure a minimum visual height of 0.4 to prevent label overlap
-          const height = Math.max(0.4, isNaN(calculatedHeight) || !isFinite(calculatedHeight) ? 0.4 : calculatedHeight);
+          const height = Math.max(
+            0.4,
+            isNaN(calculatedHeight) || !isFinite(calculatedHeight) ? 0.4 : calculatedHeight,
+          );
           const angle = count > 0 ? (index / count) * Math.PI * 2 : 0;
-          
-          // Position in a circle
           const px = Math.cos(angle) * radius;
           const pz = Math.sin(angle) * radius;
 
