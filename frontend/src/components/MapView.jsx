@@ -102,13 +102,18 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
   // ... (rest of the file remains standard)
   
   // Initialize Map
+  // NOTE: OpenStreetMap tiles are used — they are free with no API key required.
+  // The dark/light visual theme is handled entirely via CSS filter in index.css.
+  const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
+
   useEffect(() => {
     if (mapInstanceRef.current) return;
     const map = L.map(mapRef.current, { center: [40.74, -73.99], zoom: 13, zoomControl: false });
-    const darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
-    baseTileRef.current = L.tileLayer(darkUrl, {
-      maxZoom: 20,
-      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    baseTileRef.current = L.tileLayer(OSM_URL, {
+      subdomains: 'abc',
+      maxZoom: 19,
+      attribution: OSM_ATTRIBUTION,
     }).addTo(map);
 
     map.on('click', e => {
@@ -131,11 +136,11 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     const map = mapInstanceRef.current;
     if (!map || !baseTileRef.current) return;
 
-    const TILES = {
-      dark:  'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-      light: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-    };
-    baseTileRef.current.setUrl(TILES[mapTheme] || TILES.dark);
+    // Same OSM source for both themes — CSS filter in index.css handles the visual.
+    // No URL swap needed; just ensure the tile layer URL stays OSM.
+    if (baseTileRef.current._url !== OSM_URL) {
+      baseTileRef.current.setUrl(OSM_URL);
+    }
 
     // Toggle the data-theme attribute so CSS filters apply/remove
     mapRef.current?.setAttribute('data-theme', mapTheme);
