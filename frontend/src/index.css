@@ -80,21 +80,27 @@ body {
   background: var(--bg-deep) !important;
   font-family: var(--font-body) !important;
 }
-/* Dark theme — moody atmospheric rendering */
+
+/* Dark theme — invert+hue-rotate converts light OSM tiles into a dark tactical look.
+   Targeting .leaflet-tile-pane exclusively ensures overlays (heatmaps, geojson)
+   and marker pins preserve their true vibrant telemetry colors. */
 .map-container[data-theme="dark"] .leaflet-tile-pane,
 .map-container:not([data-theme]) .leaflet-tile-pane {
-  filter: brightness(0.62) saturate(0.55) hue-rotate(185deg) contrast(1.15);
+  filter: invert(100%) hue-rotate(180deg) brightness(0.80) saturate(0.85) contrast(1.1) !important;
   transition: filter 0.6s ease;
 }
-/* Light theme — clean, subtle warm tint */
+
+/* Light theme */
 .map-container[data-theme="light"] .leaflet-tile-pane {
-  filter: brightness(1.02) saturate(0.92) contrast(1.05);
+  filter: brightness(0.95) saturate(0.90) contrast(1.05) !important;
   transition: filter 0.6s ease;
 }
+
 .leaflet-control-zoom, .leaflet-control-attribution { display: none; }
 .leaflet-layer {
   animation: fadeIn 1.2s ease-out forwards;
 }
+
 
 /* =============================================
    SCROLLBARS

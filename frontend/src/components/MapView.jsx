@@ -5,6 +5,11 @@ import { useUHIContext } from '../context/UHIContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sun, Moon } from 'lucide-react';
 
+// ── Tile config: OpenStreetMap is permanently free, no API key needed.
+// Dark/light visual theme is applied via CSS filter in index.css.
+const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
+
 // A dynamic tooltip that follows the cursor on the map
 function HoverPreview({ map }) {
   const previewRef = useRef(null);
@@ -81,7 +86,10 @@ function ClickRipple({ pos }) {
 
 export default function MapView({ onMapClick, onMapMoveEnd }) {
   const { layers, layerOpacity, pos, flyTo, hotspots, tileLayers, simulationState, mapTheme, setMapTheme } = useUHIContext();
-  const mapRef = useRef(null);
+  // themeRef  → outer wrapper div — owns data-theme, targeted by CSS filters
+  // leafletRef → inner div — given to Leaflet, which takes over its attributes
+  const themeRef = useRef(null);
+  const leafletRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const baseTileRef = useRef(null);
   const clickMarkerRef = useRef(null);
@@ -99,17 +107,11 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     onMapMoveEndRef.current = onMapMoveEnd;
   }, [onMapClick, onMapMoveEnd]);
 
-  // ... (rest of the file remains standard)
-  
-  // Initialize Map
-  // NOTE: OpenStreetMap tiles are used — they are free with no API key required.
-  // The dark/light visual theme is handled entirely via CSS filter in index.css.
-  const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
-
+  // Initialize Map — Leaflet is given leafletRef (inner div) so it can't pollute
+  // themeRef (outer wrapper) which holds the data-theme CSS target.
   useEffect(() => {
     if (mapInstanceRef.current) return;
-    const map = L.map(mapRef.current, { center: [40.74, -73.99], zoom: 13, zoomControl: false });
+    const map = L.map(leafletRef.current, { center: [40.74, -73.99], zoom: 13, zoomControl: false });
     baseTileRef.current = L.tileLayer(OSM_URL, {
       subdomains: 'abc',
       maxZoom: 19,
@@ -118,7 +120,7 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
 
     map.on('click', e => {
       setClickScreenPos({ x: e.containerPoint.x, y: e.containerPoint.y });
-      setTimeout(() => setClickScreenPos(null), 1000); // clear ripple
+      setTimeout(() => setClickScreenPos(null), 1000);
       if (onMapClickRef.current) onMapClickRef.current(e.latlng.lat, e.latlng.lng);
     });
 
@@ -126,24 +128,17 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
       const center = map.getCenter();
       if (onMapMoveEndRef.current) onMapMoveEndRef.current(center.lat, center.lng);
     });
-    
+
     mapInstanceRef.current = map;
     return () => { map.remove(); mapInstanceRef.current = null; };
   }, []);
 
-  // Handle Map Theme (Dark <-> Light)
+  // Handle Map Theme — updates data-theme on the OUTER wrapper (themeRef),
+  // which is safe because Leaflet only owns leafletRef (the inner div).
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !baseTileRef.current) return;
-
-    // Same OSM source for both themes — CSS filter in index.css handles the visual.
-    // No URL swap needed; just ensure the tile layer URL stays OSM.
-    if (baseTileRef.current._url !== OSM_URL) {
-      baseTileRef.current.setUrl(OSM_URL);
+    if (themeRef.current) {
+      themeRef.current.setAttribute('data-theme', mapTheme);
     }
-
-    // Toggle the data-theme attribute so CSS filters apply/remove
-    mapRef.current?.setAttribute('data-theme', mapTheme);
   }, [mapTheme]);
 
   // Handle Fly-to
@@ -302,7 +297,15 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
 
   return (
     <>
-      <div ref={mapRef} data-theme={mapTheme} className="map-container relative z-0 h-full w-full" />
+      {/* Outer wrapper: holds data-theme for CSS dark/light filter — Leaflet never touches this div */}
+      <div
+        ref={themeRef}
+        data-theme={mapTheme}
+        className="map-container relative z-0 h-full w-full"
+      >
+        {/* Inner div: given to Leaflet — it can take full ownership of this element */}
+        <div ref={leafletRef} className="absolute inset-0" />
+      </div>
       
       {/* Theme Toggle Button Overlay */}
       <div className="absolute top-4 right-4 z-[999] pointer-events-auto">
