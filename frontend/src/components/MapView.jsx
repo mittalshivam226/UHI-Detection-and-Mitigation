@@ -105,8 +105,11 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
   useEffect(() => {
     if (mapInstanceRef.current) return;
     const map = L.map(mapRef.current, { center: [40.74, -73.99], zoom: 13, zoomControl: false });
-    const darkUrl  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-    baseTileRef.current = L.tileLayer(darkUrl, { subdomains: 'abcd', maxZoom: 20 }).addTo(map);
+    const darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+    baseTileRef.current = L.tileLayer(darkUrl, {
+      maxZoom: 20,
+      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
 
     map.on('click', e => {
       setClickScreenPos({ x: e.containerPoint.x, y: e.containerPoint.y });
@@ -129,8 +132,8 @@ export default function MapView({ onMapClick, onMapMoveEnd }) {
     if (!map || !baseTileRef.current) return;
 
     const TILES = {
-      dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      dark:  'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+      light: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
     };
     baseTileRef.current.setUrl(TILES[mapTheme] || TILES.dark);
 
